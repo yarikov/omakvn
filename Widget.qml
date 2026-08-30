@@ -25,9 +25,20 @@ BarWidget {
 
   property bool popupOpen: false
   readonly property bool opened: popupOpen
+  property bool popoutSwitchClosing: false
   function open() { popupOpen = true }
   function close() { popupOpen = false }
+  function closeForPopoutSwitch() {
+    popoutSwitchClosing = true
+    close()
+    Qt.callLater(function() { root.popoutSwitchClosing = false })
+  }
   function toggle() { popupOpen = !popupOpen }
+  function switchPanel(direction) {
+    if (bar && typeof bar.switchPanelFrom === "function")
+      return bar.switchPanelFrom(root, direction)
+    return false
+  }
 
   readonly property color foreground: bar ? bar.foreground : Color.foreground
   readonly property color urgent: bar ? bar.urgent : Color.urgent
@@ -561,6 +572,12 @@ BarWidget {
           Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Escape) {
               root.close()
+              event.accepted = true
+              return
+            }
+            if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+              var direction = (event.modifiers & Qt.ShiftModifier) || event.key === Qt.Key_Backtab ? -1 : 1
+              root.switchPanel(direction)
               event.accepted = true
               return
             }
