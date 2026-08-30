@@ -43,6 +43,11 @@ BarWidget {
   readonly property int rowAutoConnect: rowKillSwitch + 1
   readonly property int rowTui: rowAutoConnect + 1
   readonly property int rowCount: rowTui + 1
+  readonly property int profileRowHeight: Style.space(40)
+  readonly property int profileListSpacing: Style.space(2)
+  readonly property int visibleProfileRows: 6
+  readonly property int profileListHeight: visibleProfileRows * profileRowHeight
+    + (visibleProfileRows - 1) * profileListSpacing
   property int cursorIndex: 0
   property bool cursorActive: false
 
@@ -199,10 +204,8 @@ BarWidget {
     owner: root
     open: root.popupOpen
     focusTarget: keyCatcher
-    contentWidth: fittedContentWidth(Style.space(340))
-    contentHeight: root.popupOpen && kvn.daemonUp && root.profileCount > 0
-      ? cappedContentHeight(Style.space(600))
-      : fittedContentHeight(mainColumn.implicitHeight)
+    contentWidth: fittedContentWidth(Style.space(380))
+    contentHeight: fittedContentHeight(mainColumn.implicitHeight)
 
     ColumnLayout {
       id: mainColumn
@@ -356,12 +359,12 @@ BarWidget {
           id: profileList
           Layout.fillWidth: true
           Layout.fillHeight: true
-          Layout.preferredHeight: Style.space(180)
-          implicitHeight: contentHeight
+          Layout.preferredHeight: root.profileListHeight
+          implicitHeight: root.profileListHeight
           visible: root.profileCount > 0
           clip: true
           boundsBehavior: Flickable.StopAtBounds
-          spacing: Style.space(2)
+          spacing: root.profileListSpacing
           model: kvn.profiles
 
           delegate: CursorSurface {
@@ -372,7 +375,7 @@ BarWidget {
             readonly property int logicalIndex: root.rowProfileStart + index
             readonly property bool isCursor: root.cursorActive && root.cursorIndex === logicalIndex
             width: profileList.width
-            height: Math.max(Style.space(34), profileContent.implicitHeight + Style.space(10))
+            height: root.profileRowHeight
             hasCursor: isCursor
             current: isActive
             foreground: root.foreground
