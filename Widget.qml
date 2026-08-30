@@ -24,6 +24,8 @@ BarWidget {
   }
 
   property bool popupOpen: false
+  readonly property bool opened: popupOpen
+  function open() { popupOpen = true }
   function close() { popupOpen = false }
   function toggle() { popupOpen = !popupOpen }
 
