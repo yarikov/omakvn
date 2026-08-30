@@ -347,8 +347,8 @@ BarWidget {
 
         PanelSectionHeader {
           Layout.fillWidth: true
-          text: "Profiles"
-          foreground: root.dim
+          text: "PROFILES"
+          foreground: root.foreground
           fontFamily: root.fontFamily
         }
 
@@ -466,8 +466,8 @@ BarWidget {
 
         PanelSectionHeader {
           Layout.fillWidth: true
-          text: "Settings"
-          foreground: root.dim
+          text: "SETTINGS"
+          foreground: root.foreground
           fontFamily: root.fontFamily
         }
 
