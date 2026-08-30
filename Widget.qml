@@ -16,7 +16,7 @@ pragma ComponentBehavior: Bound
 // Middle click: open the full TUI.
 BarWidget {
   id: root
-  moduleName: "omakvn"
+  moduleName: "yarikov.omakvn"
 
   KvnService {
     id: kvn

@@ -25,7 +25,7 @@ The plugin is placed in the right bar section by default. It can also be moved
 after installation:
 
 ```bash
-omarchy bar move omakvn --section right
+omarchy bar move yarikov.omakvn --section right
 ```
 
 Alternatively, `kvn-tui setup --omarchy` installs and enables the plugin along
@@ -45,13 +45,13 @@ socket. It does not implement VPN protocols or manage the tunnel itself.
 ## Update
 
 ```bash
-omarchy plugin update omakvn
+omarchy plugin update yarikov.omakvn
 ```
 
 ## Remove
 
 ```bash
-omarchy plugin remove omakvn
+omarchy plugin remove yarikov.omakvn
 ```
 
 ## Development
@@ -63,11 +63,11 @@ omarchy plugin validate .
 ```
 
 For local testing, install the working tree manually under
-`~/.config/omarchy/plugins/omakvn/`, rescan plugins, and enable it:
+`~/.config/omarchy/plugins/yarikov.omakvn/`, rescan plugins, and enable it:
 
 ```bash
 omarchy-shell shell rescanPlugins
-omarchy plugin enable omakvn
+omarchy plugin enable yarikov.omakvn
 ```
 
 ## Credits
