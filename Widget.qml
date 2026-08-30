@@ -32,16 +32,16 @@ BarWidget {
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
-  // All keyboard-selectable panel rows in order: profiles, then controls,
-  // then settings, then the footer button.
+  // All keyboard-selectable panel rows in order: hero toggle, profiles,
+  // settings, then the footer button.
   readonly property int profileCount: kvn.profiles.length
-  readonly property int rowConnectLast: profileCount + 0
-  readonly property int rowDisconnect: profileCount + 1
-  readonly property int rowRouting: profileCount + 2
-  readonly property int rowRegion: profileCount + 3
-  readonly property int rowKillSwitch: profileCount + 4
-  readonly property int rowAutoConnect: profileCount + 5
-  readonly property int rowTui: profileCount + 6
+  readonly property int rowVpnToggle: 0
+  readonly property int rowProfileStart: 1
+  readonly property int rowRouting: rowProfileStart + profileCount
+  readonly property int rowRegion: rowRouting + 1
+  readonly property int rowKillSwitch: rowRegion + 1
+  readonly property int rowAutoConnect: rowKillSwitch + 1
+  readonly property int rowTui: rowAutoConnect + 1
   readonly property int rowCount: rowTui + 1
   property int cursorIndex: 0
   property bool cursorActive: false
@@ -56,6 +56,10 @@ BarWidget {
     for (var i = 0; i < kvn.profiles.length; i++)
       if (kvn.profiles[i].id === kvn.lastProfileId) return kvn.profiles[i]
     return null
+  }
+
+  function heroProfile() {
+    return activeProfile() || lastProfile() || (kvn.profiles.length > 0 ? kvn.profiles[0] : null)
   }
 
   function startDaemon() {
@@ -80,10 +84,10 @@ BarWidget {
     }
     if (kvn.connected) {
       kvn.disconnectVpn()
-    } else if (kvn.lastProfileId !== "") {
-      kvn.connectProfile(kvn.lastProfileId)
     } else {
-      root.toggle()
+      var profile = lastProfile() || (kvn.profiles.length > 0 ? kvn.profiles[0] : null)
+      if (profile) kvn.connectProfile(profile.id)
+      else root.toggle()
     }
   }
 
@@ -139,11 +143,7 @@ BarWidget {
   onPopupOpenChanged: {
     if (popupOpen) {
       cursorActive = false
-      cursorIndex = 0
-      if (kvn.connected && kvn.activeProfileId !== "") {
-        for (var i = 0; i < kvn.profiles.length; i++)
-          if (kvn.profiles[i].id === kvn.activeProfileId) { cursorIndex = i; break }
-      }
+      cursorIndex = rowVpnToggle
       Qt.callLater(function() { if (root.popupOpen) keyCatcher.forceActiveFocus() })
     }
   }
@@ -209,28 +209,6 @@ BarWidget {
       anchors.fill: parent
       spacing: Style.space(6)
 
-      // --- header ---
-      RowLayout {
-        Layout.fillWidth: true
-        spacing: Style.space(8)
-
-        Text {
-          text: kvn.connected ? "󰦝" : "󰦜"
-          color: !kvn.daemonUp || kvn.statusIsError ? Color.urgent
-            : (kvn.connected ? root.foreground : root.dim)
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.title
-        }
-
-        Text {
-          text: "kvn-tui"
-          color: root.foreground
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.title
-          Layout.fillWidth: true
-        }
-      }
-
       // --- daemon offline ---
       ColumnLayout {
         Layout.fillWidth: true
@@ -246,27 +224,16 @@ BarWidget {
           font.pixelSize: Style.font.body
         }
 
-        Rectangle {
+        Button {
           Layout.fillWidth: true
           Layout.preferredHeight: Style.space(36)
-          radius: Style.cornerRadius
-          color: startArea.containsMouse ? Qt.lighter(Color.menu.selectedBackground, 1.15) : Color.menu.selectedBackground
-
-          Text {
-            anchors.centerIn: parent
-            text: "Start daemon"
-            color: Color.menu.selectedText
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.heading
-          }
-
-          MouseArea {
-            id: startArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.startDaemon()
-          }
+          text: "Start daemon"
+          foreground: root.foreground
+          accent: Color.accent
+          fontFamily: root.fontFamily
+          fontSize: Style.font.heading
+          bordered: true
+          onClicked: root.startDaemon()
         }
       }
 
@@ -277,17 +244,81 @@ BarWidget {
         spacing: Style.space(6)
         visible: kvn.daemonUp
 
-        // status line
-        Text {
+        // Hero: VPN icon, current/last profile and connection toggle. Mirrors
+        // the Omarchy network panel's Wi-Fi header.
+        Item {
           Layout.fillWidth: true
-          visible: kvn.statusText !== ""
-          text: kvn.statusText
-          color: kvn.statusIsError ? Color.urgent : root.dim
-          wrapMode: Text.Wrap
-          elide: Text.ElideRight
-          maximumLineCount: 2
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.caption
+          implicitHeight: Math.max(heroIcon.implicitHeight, heroLabels.implicitHeight, vpnSwitch.implicitHeight)
+
+          Text {
+            id: heroIcon
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            text: kvn.connected ? "󰦝" : "󰦜"
+            color: kvn.statusIsError ? root.urgent : (kvn.connected ? root.foreground : root.dim)
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.display
+          }
+
+          ToggleSwitch {
+            id: vpnSwitch
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            checked: kvn.connected
+            busy: kvn.busy
+            enabled: kvn.connected || root.profileCount > 0
+            opacity: enabled ? 1 : 0.4
+            hasCursor: root.cursorActive && root.cursorIndex === root.rowVpnToggle
+            foreground: root.foreground
+            accent: Color.accent
+            onHovered: function(isHovered) {
+              if (isHovered) {
+                root.cursorActive = true
+                root.cursorIndex = root.rowVpnToggle
+              }
+            }
+            onToggled: root.toggleVpn()
+
+            PanelToolTip {
+              visible: vpnSwitch.containsMouse
+              text: kvn.connected ? "Disconnect VPN" : "Connect VPN"
+              fontFamily: root.fontFamily
+            }
+          }
+
+          Column {
+            id: heroLabels
+            anchors.left: heroIcon.right
+            anchors.leftMargin: Style.space(14)
+            anchors.right: vpnSwitch.left
+            anchors.rightMargin: Style.space(12)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Style.space(2)
+
+            Text {
+              width: parent.width
+              text: {
+                var profile = root.heroProfile()
+                return profile ? profile.name : "No profiles"
+              }
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.title
+              font.bold: true
+              elide: Text.ElideRight
+            }
+
+            Text {
+              width: parent.width
+              text: kvn.busy ? "CONNECTING…" : (kvn.connected ? "CONNECTED" : "DISCONNECTED")
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1.2
+              elide: Text.ElideRight
+            }
+          }
         }
 
         // Connection details grid — same shape as the Omarchy network panel.
@@ -309,33 +340,9 @@ BarWidget {
           DetailValue { text: root.formatBytes(kvn.traffic.upTotal) }
         }
 
-        // --- connection controls ---
-        RowLayout {
+        PanelSeparator {
           Layout.fillWidth: true
-          spacing: Style.space(6)
-
-          ControlButton {
-            id: connectLastButton
-            Layout.fillWidth: true
-            glyph: "▶"
-            label: {
-              var p = root.lastProfile()
-              return p ? "Connect " + p.name : "Connect last"
-            }
-            enabled: kvn.lastProfileId !== "" && !kvn.connected
-            rowIndex: root.rowConnectLast
-            primary: true
-            onActivated: if (kvn.lastProfileId !== "") kvn.connectProfile(kvn.lastProfileId)
-          }
-
-          ControlButton {
-            Layout.fillWidth: true
-            glyph: "■"
-            label: "Disconnect"
-            enabled: kvn.connected
-            rowIndex: root.rowDisconnect
-            onActivated: kvn.disconnectVpn()
-          }
+          foreground: root.foreground
         }
 
         PanelSectionHeader {
@@ -358,18 +365,21 @@ BarWidget {
           spacing: Style.space(2)
           model: kvn.profiles
 
-          delegate: Rectangle {
+          delegate: CursorSurface {
             id: profileRow
             required property int index
             required property var modelData
             readonly property bool isActive: modelData.id === kvn.activeProfileId
-            readonly property bool isCursor: root.cursorActive && root.cursorIndex === index
+            readonly property int logicalIndex: root.rowProfileStart + index
+            readonly property bool isCursor: root.cursorActive && root.cursorIndex === logicalIndex
             width: profileList.width
-            height: Style.space(34)
-            radius: Style.cornerRadius
-            color: isCursor ? Color.menu.selectedBackground
-              : (rowHover.containsMouse ? Util.alpha(root.foreground, 0.06) : "transparent")
-            Behavior on color { ColorAnimation { duration: 80 } }
+            height: Math.max(Style.space(34), profileContent.implicitHeight + Style.space(10))
+            hasCursor: isCursor
+            current: isActive
+            foreground: root.foreground
+            accent: Color.accent
+            fill: Style.hoverFillFor(root.foreground, Color.accent)
+            currentFill: Style.selectedFillFor(root.foreground, Color.accent)
 
             MouseArea {
               id: rowHover
@@ -378,7 +388,7 @@ BarWidget {
               cursorShape: Qt.PointingHandCursor
               onContainsMouseChanged: if (containsMouse) {
                 root.cursorActive = true
-                root.cursorIndex = profileRow.index
+                root.cursorIndex = profileRow.logicalIndex
               }
               onClicked: {
                 if (!profileRow.isActive) kvn.connectProfile(profileRow.modelData.id)
@@ -386,31 +396,39 @@ BarWidget {
             }
 
             RowLayout {
+              id: profileContent
               anchors.fill: parent
               anchors.leftMargin: Style.space(10)
               anchors.rightMargin: Style.space(10)
               spacing: Style.space(8)
 
-              Text {
-                text: profileRow.isActive ? "●" : " "
-                color: Color.accent
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-              }
-
-              Text {
+              ColumnLayout {
                 Layout.fillWidth: true
-                text: profileRow.modelData.name
-                color: profileRow.isCursor ? Color.menu.selectedText : root.foreground
-                elide: Text.ElideMiddle
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.body
-                font.bold: profileRow.isActive
+                spacing: Style.space(1)
+
+                Text {
+                  Layout.fillWidth: true
+                  text: profileRow.modelData.name
+                  color: root.foreground
+                  elide: Text.ElideMiddle
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                }
+
+                Text {
+                  Layout.fillWidth: true
+                  visible: profileRow.isActive
+                  text: "Connected"
+                  color: root.foreground
+                  elide: Text.ElideRight
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                }
               }
 
               Text {
                 text: profileRow.modelData.protocol
-                color: profileRow.isCursor ? Color.menu.selectedText : root.dim
+                color: root.dim
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 visible: text !== ""
@@ -439,6 +457,11 @@ BarWidget {
             font.family: root.fontFamily
             font.pixelSize: Style.font.body
           }
+        }
+
+        PanelSeparator {
+          Layout.fillWidth: true
+          foreground: root.foreground
         }
 
         PanelSectionHeader {
@@ -497,34 +520,29 @@ BarWidget {
           onActivated: kvn.setAutoConnect(!kvn.autoConnect)
         }
 
+        PanelSeparator {
+          Layout.fillWidth: true
+          foreground: root.foreground
+        }
+
         // Footer: open the full TUI
-        Rectangle {
+        Button {
           Layout.fillWidth: true
           Layout.preferredHeight: Style.space(30)
-          radius: Style.cornerRadius
-          color: tuiArea.containsMouse || (root.cursorActive && root.cursorIndex === root.rowTui)
-            ? Qt.lighter(Color.menu.selectedBackground, 1.15)
-            : Util.alpha(root.foreground, 0.06)
-
-          Text {
-            anchors.centerIn: parent
-            text: "Open TUI"
-            color: root.foreground
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.body
-          }
-
-          MouseArea {
-            id: tuiArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onContainsMouseChanged: if (containsMouse) {
+          text: "Open TUI"
+          foreground: root.foreground
+          accent: Color.accent
+          fontFamily: root.fontFamily
+          fontSize: Style.font.body
+          bordered: true
+          hasCursor: root.cursorActive && root.cursorIndex === root.rowTui
+          onHovered: function(isHovered) {
+            if (isHovered) {
               root.cursorActive = true
               root.cursorIndex = root.rowTui
             }
-            onClicked: root.openTui()
           }
+          onClicked: root.openTui()
         }
 
         // Hidden focus catcher for keyboard navigation. Must live inside the
@@ -618,18 +636,17 @@ BarWidget {
   }
 
   function syncCursorView() {
-    if (cursorIndex < profileCount)
-      profileList.positionViewAtIndex(cursorIndex, ListView.Contain)
+    if (cursorIndex >= rowProfileStart && cursorIndex < rowRouting)
+      profileList.positionViewAtIndex(cursorIndex - rowProfileStart, ListView.Contain)
   }
 
   function activateRow(index) {
-    if (index < profileCount) {
-      if (kvn.profiles[index] && kvn.profiles[index].id !== kvn.activeProfileId)
-        kvn.connectProfile(kvn.profiles[index].id)
-    } else if (index === rowConnectLast) {
-      if (kvn.lastProfileId !== "" && !kvn.connected) kvn.connectProfile(kvn.lastProfileId)
-    } else if (index === rowDisconnect) {
-      if (kvn.connected) kvn.disconnectVpn()
+    if (index === rowVpnToggle) {
+      if (!kvn.busy && (kvn.connected || profileCount > 0)) toggleVpn()
+    } else if (index >= rowProfileStart && index < rowRouting) {
+      var profileIndex = index - rowProfileStart
+      if (kvn.profiles[profileIndex] && kvn.profiles[profileIndex].id !== kvn.activeProfileId)
+        kvn.connectProfile(kvn.profiles[profileIndex].id)
     } else if (index === rowRouting) {
       cycleMode(true)
     } else if (index === rowRegion) {
@@ -667,69 +684,8 @@ BarWidget {
     horizontalAlignment: Text.AlignRight
   }
 
-  // Connection control button (Connect / Disconnect).
-  component ControlButton: Rectangle {
-    id: control
-    signal activated()
-    property string glyph: ""
-    property string label: ""
-    property bool enabled: true
-    property bool primary: false
-    property int rowIndex: -1
-    readonly property bool isCursor: root.cursorActive && root.cursorIndex === rowIndex
-    readonly property bool highlighted: isCursor || (hover.containsMouse && enabled)
-
-    Layout.fillWidth: true
-    Layout.preferredHeight: Style.space(34)
-    radius: Style.cornerRadius
-    color: !enabled ? "transparent"
-      : highlighted ? (primary ? Qt.lighter(Color.menu.selectedBackground, 1.15) : Util.alpha(root.foreground, 0.1))
-      : primary ? Color.menu.selectedBackground
-      : Util.alpha(root.foreground, 0.06)
-    opacity: enabled ? 1 : 0.4
-    Behavior on color { ColorAnimation { duration: 80 } }
-
-    MouseArea {
-      id: hover
-      anchors.fill: parent
-      hoverEnabled: true
-      enabled: control.enabled
-      cursorShape: Qt.PointingHandCursor
-      onContainsMouseChanged: if (containsMouse) {
-        root.cursorActive = true
-        root.cursorIndex = control.rowIndex
-      }
-      onClicked: control.activated()
-    }
-
-    RowLayout {
-      anchors.centerIn: parent
-      spacing: Style.space(6)
-      width: parent.width - Style.space(12)
-
-      Text {
-        text: control.glyph
-        visible: control.glyph !== ""
-        color: control.primary && control.highlighted ? Color.menu.selectedText
-          : (control.primary ? Color.menu.selectedText : root.dim)
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.caption
-      }
-
-      Text {
-        Layout.fillWidth: true
-        text: control.label
-        color: control.primary ? Color.menu.selectedText : root.foreground
-        elide: Text.ElideMiddle
-        horizontalAlignment: Text.AlignHCenter
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.caption
-      }
-    }
-  }
-
   // Selectable settings row: cycler or toggle.
-  component PanelRow: Rectangle {
+  component PanelRow: CursorSurface {
     id: row
     signal activated()
     signal step(bool forward)
@@ -746,11 +702,11 @@ BarWidget {
 
     Layout.fillWidth: true
     Layout.preferredHeight: rowHeight
-    radius: Style.cornerRadius
-    color: isCursor ? Color.menu.selectedBackground
-      : (rowArea.containsMouse && rowEnabled ? Util.alpha(root.foreground, 0.06) : "transparent")
+    hasCursor: isCursor
+    foreground: root.foreground
+    accent: Color.accent
+    fill: Style.hoverFillFor(root.foreground, Color.accent)
     opacity: rowEnabled ? 1 : 0.4
-    Behavior on color { ColorAnimation { duration: 80 } }
 
     MouseArea {
       id: rowArea
@@ -774,7 +730,7 @@ BarWidget {
       Text {
         text: row.glyph
         visible: row.glyph !== ""
-        color: row.isCursor ? Color.menu.selectedText : root.dim
+        color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
       }
@@ -782,7 +738,7 @@ BarWidget {
       Text {
         Layout.fillWidth: true
         text: row.label
-        color: row.isCursor ? Color.menu.selectedText : root.foreground
+        color: root.foreground
         elide: Text.ElideMiddle
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
@@ -791,7 +747,7 @@ BarWidget {
       Text {
         visible: !row.showToggle && row.valueText !== ""
         text: row.valueText
-        color: row.isCursor ? Color.menu.selectedText : root.dim
+        color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
       }
@@ -801,7 +757,7 @@ BarWidget {
         checked: row.toggleChecked
         busy: row.toggleBusy
         interactive: false
-        foreground: row.isCursor ? Color.menu.selectedText : root.foreground
+        foreground: root.foreground
         accent: Color.accent
         onToggled: row.activated()
       }
