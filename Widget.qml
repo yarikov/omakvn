@@ -324,20 +324,19 @@ BarWidget {
         // Connection details grid — same shape as the Omarchy network panel.
         GridLayout {
           Layout.fillWidth: true
-          visible: kvn.connected
           columns: 4
           columnSpacing: Style.space(20)
           rowSpacing: Style.spacing.labelGap
 
           InfoLabel { text: "Receiving" }
-          DetailValue { text: root.formatRate(kvn.traffic.down) }
+          DetailValue { text: root.formatRate(kvn.connected ? kvn.traffic.down : 0) }
           InfoLabel { text: "Sending" }
-          DetailValue { text: root.formatRate(kvn.traffic.up) }
+          DetailValue { text: root.formatRate(kvn.connected ? kvn.traffic.up : 0) }
 
           InfoLabel { text: "Downloaded" }
-          DetailValue { text: root.formatBytes(kvn.traffic.downTotal) }
+          DetailValue { text: root.formatBytes(kvn.connected ? kvn.traffic.downTotal : 0) }
           InfoLabel { text: "Uploaded" }
-          DetailValue { text: root.formatBytes(kvn.traffic.upTotal) }
+          DetailValue { text: root.formatBytes(kvn.connected ? kvn.traffic.upTotal : 0) }
         }
 
         PanelSeparator {
