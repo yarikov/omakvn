@@ -35,6 +35,16 @@ Item {
   readonly property bool connected: connection === "Connected"
   readonly property bool busy: connection === "Connecting" || connection === "ConnectPending"
 
+  function markDaemonDown() {
+    daemonUp = false
+    connection = "Idle"
+    statusText = ""
+    statusIsError = false
+    activeProfileId = ""
+    pendingProfileId = ""
+    traffic = ({ up: 0, down: 0, upTotal: 0, downTotal: 0, conns: 0 })
+  }
+
   // --- socket plumbing ------------------------------------------------------
   property string uid: ""
   readonly property var socket: socketLoader.item
@@ -99,11 +109,15 @@ Item {
         onRead: function(data) { root.handleLine(data) }
       }
       onConnectionStateChanged: {
-        root.daemonUp = connected
-        if (connected) root.attach()
+        if (connected) {
+          root.daemonUp = true
+          root.attach()
+        } else {
+          root.markDaemonDown()
+        }
       }
       onError: function(error) {
-        root.daemonUp = false
+        root.markDaemonDown()
       }
     }
   }

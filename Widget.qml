@@ -187,7 +187,7 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: kvn.connected ? "󰦝" : "󰦜"
+    text: kvn.daemonUp && kvn.connected ? "󰦝" : "󰦜"
     fontFamily: root.fontFamily
     tooltipText: {
       if (!kvn.daemonUp) return "kvn-tui — daemon not running (click to start)"
@@ -283,7 +283,7 @@ BarWidget {
             id: heroIcon
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
-            text: kvn.connected ? "󰦝" : "󰦜"
+            text: kvn.daemonUp && kvn.connected ? "󰦝" : "󰦜"
             color: kvn.statusIsError ? root.urgent : (kvn.connected ? root.foreground : root.dim)
             font.family: root.fontFamily
             font.pixelSize: Style.font.display
