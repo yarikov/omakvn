@@ -22,7 +22,20 @@ BarWidget {
 
   KvnService {
     id: kvn
-    onDaemonUpChanged: if (!daemonUp) root.close()
+    onDaemonUpChanged: {
+      if (!daemonUp) {
+        root.close()
+      } else if (root.popupOpen) {
+        // The offline focus target is hidden when the daemon comes up.
+        // Move focus to the now-visible online key handler immediately.
+        root.cursorActive = false
+        root.cursorIndex = root.rowVpnToggle
+        Qt.callLater(function() {
+          if (root.popupOpen && popup.focusTarget)
+            popup.focusTarget.forceActiveFocus()
+        })
+      }
+    }
   }
 
   property bool popupOpen: false
