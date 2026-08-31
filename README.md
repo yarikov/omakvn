@@ -11,7 +11,8 @@ controls directly from the bar.
 
 ## Quick start
 
-1. Install `kvn-tui` and start its user service:
+1. Follow the full [`kvn-tui` installation guide](https://github.com/yarikov/kvn-tui#installation-arch-linux),
+   or install the AUR package and start its user service:
 
    ```bash
    yay -S kvn-tui-bin
