@@ -71,7 +71,7 @@ optional launcher keybinding and floating-window rule.
 | Key | Action |
 |---|---|
 | `j` / `k`, up/down | Move between controls |
-| `g` / `G` | Jump to the first or last control |
+| `gg` / `G` | Jump to the first or last control |
 | `Enter` / `Space` | Activate the selected control |
 | `h` / `l`, left/right | Change the selected routing mode or region |
 | `s` | Disconnect |

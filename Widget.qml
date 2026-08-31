@@ -61,6 +61,7 @@ BarWidget {
   readonly property int rowCount: rowTui + 1
   property int cursorIndex: 0
   property bool cursorActive: false
+  property bool gPending: false
 
   function activeProfile() {
     for (var i = 0; i < kvn.profiles.length; i++)
@@ -164,6 +165,7 @@ BarWidget {
   }
 
   onPopupOpenChanged: {
+    gPending = false
     if (popupOpen) {
       cursorActive = false
       cursorIndex = rowVpnToggle
@@ -598,6 +600,11 @@ BarWidget {
               }
               return
             }
+            var isLowerG = event.key === Qt.Key_G
+              && !(event.modifiers & Qt.ShiftModifier)
+            if (!isLowerG && root.gPending) {
+              root.gPending = false
+            }
             if (event.key === Qt.Key_K && (event.modifiers & Qt.ShiftModifier)) {
               root.activateRow(root.rowKillSwitch)
               event.accepted = true
@@ -621,10 +628,15 @@ BarWidget {
               root.cursorIndex = root.rowCount - 1
               root.syncCursorView()
               event.accepted = true
-            } else if (event.key === Qt.Key_G) {
-              root.cursorActive = true
-              root.cursorIndex = 0
-              root.syncCursorView()
+            } else if (isLowerG) {
+              if (root.gPending) {
+                root.gPending = false
+                root.cursorActive = true
+                root.cursorIndex = 0
+                root.syncCursorView()
+              } else {
+                root.gPending = true
+              }
               event.accepted = true
             } else if (event.text === "s") {
               if (kvn.connected) kvn.disconnectVpn()
