@@ -37,7 +37,7 @@ Item {
 
   // --- socket plumbing ------------------------------------------------------
   property string uid: ""
-  property bool linkEnabled: true
+  readonly property var socket: socketLoader.item
 
   readonly property string socketPath: {
     var xdg = Quickshell.env("XDG_RUNTIME_DIR") || ""
@@ -46,9 +46,9 @@ Item {
   }
 
   function send(cmd) {
-    if (!sock.connected) return false
-    sock.write(JSON.stringify(cmd) + "\n")
-    sock.flush()
+    if (!socket || !socket.connected) return false
+    socket.write(JSON.stringify(cmd) + "\n")
+    socket.flush()
     return true
   }
 
@@ -64,6 +64,20 @@ Item {
   function setKillSwitch(enabled) { send({ cmd: "SetKillSwitch", enabled: enabled }) }
   function setAutoConnect(enabled) { send({ cmd: "SetAutoConnect", enabled: enabled }) }
 
+  // Quickshell's Socket does not recover from ServerNotFound: its internal
+  // QLocalSocket remains allocated, so toggling `connected` cannot retry.
+  // Destroy and recreate the Socket object instead.
+  function reconnectSocket() {
+    socketLoader.active = false
+    reconnectDelay.restart()
+  }
+
+  Timer {
+    id: reconnectDelay
+    interval: 100
+    onTriggered: socketLoader.active = true
+  }
+
   // Resolving the UID only matters when XDG_RUNTIME_DIR is unset (rare);
   // `id -u` runs once at startup.
   Process {
@@ -75,32 +89,32 @@ Item {
     }
   }
 
-  Socket {
-    id: sock
-    path: root.socketPath
-    connected: root.socketPath !== "" && root.linkEnabled
-    parser: SplitParser {
-      onRead: function(data) { root.handleLine(data) }
-    }
-    onConnectedChanged: {
-      root.daemonUp = connected
-      if (connected) root.attach()
-    }
-    onError: function(error) {
-      root.daemonUp = false
+  Loader {
+    id: socketLoader
+    active: root.socketPath !== ""
+    sourceComponent: Socket {
+      path: root.socketPath
+      connected: true
+      parser: SplitParser {
+        onRead: function(data) { root.handleLine(data) }
+      }
+      onConnectionStateChanged: {
+        root.daemonUp = connected
+        if (connected) root.attach()
+      }
+      onError: function(error) {
+        root.daemonUp = false
+      }
     }
   }
 
   // Flip the link off and on until the daemon answers. A failed connect
   // leaves the Socket dead — it does not retry on its own.
   Timer {
-    interval: 5000
+    interval: 1000
     repeat: true
     running: !root.daemonUp && root.socketPath !== ""
-    onTriggered: {
-      root.linkEnabled = false
-      root.linkEnabled = true
-    }
+    onTriggered: root.reconnectSocket()
   }
 
   property string _profilesKey: ""
@@ -113,6 +127,11 @@ Item {
       return
     }
     if (!snap || snap.connection === undefined) return
+
+    // A valid snapshot is definitive proof that the daemon is reachable.
+    // The socket can connect during component construction, before QML sees
+    // connectionStateChanged, so do not rely on that signal alone.
+    daemonUp = true
 
     connection = String(snap.connection)
     statusText = String(snap.status || "")

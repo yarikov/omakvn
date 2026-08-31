@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import qs.Commons
 import qs.Ui
 
@@ -87,7 +88,13 @@ BarWidget {
   }
 
   function startDaemon() {
-    Quickshell.execDetached(["systemctl", "--user", "start", "kvn-tui.service"])
+    if (!daemonStarter.running) daemonStarter.running = true
+  }
+
+  Process {
+    id: daemonStarter
+    command: ["systemctl", "--user", "start", "kvn-tui.service"]
+    onExited: kvn.reconnectSocket()
   }
 
   function openTui() {
