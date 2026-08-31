@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import qs.Commons
@@ -379,6 +380,8 @@ BarWidget {
           boundsBehavior: Flickable.StopAtBounds
           spacing: root.profileListSpacing
           model: kvn.profiles
+
+          ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
           delegate: CursorSurface {
             id: profileRow
