@@ -598,7 +598,10 @@ BarWidget {
               }
               return
             }
-            if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
+            if (event.key === Qt.Key_K && (event.modifiers & Qt.ShiftModifier)) {
+              root.activateRow(root.rowKillSwitch)
+              event.accepted = true
+            } else if (event.key === Qt.Key_J || event.key === Qt.Key_Down) {
               root.moveCursor(1)
               event.accepted = true
             } else if (event.key === Qt.Key_K || event.key === Qt.Key_Up) {
@@ -622,9 +625,6 @@ BarWidget {
               root.cursorActive = true
               root.cursorIndex = 0
               root.syncCursorView()
-              event.accepted = true
-            } else if (event.text === "K") {
-              root.activateRow(root.rowKillSwitch)
               event.accepted = true
             } else if (event.text === "s") {
               if (kvn.connected) kvn.disconnectVpn()
