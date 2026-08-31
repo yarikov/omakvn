@@ -174,9 +174,11 @@ BarWidget {
   onPopupOpenChanged: {
     gPending = false
     if (popupOpen) {
-      cursorActive = false
+      cursorActive = !kvn.daemonUp
       cursorIndex = rowVpnToggle
-      Qt.callLater(function() { if (root.popupOpen) keyCatcher.forceActiveFocus() })
+      Qt.callLater(function() {
+        if (root.popupOpen) popup.focusTarget.forceActiveFocus()
+      })
     }
   }
 
@@ -230,7 +232,7 @@ BarWidget {
     bar: root.bar
     owner: root
     open: root.popupOpen
-    focusTarget: keyCatcher
+    focusTarget: kvn.daemonUp ? keyCatcher : daemonKeyCatcher
     contentWidth: fittedContentWidth(Style.space(380))
     contentHeight: fittedContentHeight(mainColumn.implicitHeight)
 
@@ -262,7 +264,31 @@ BarWidget {
           fontFamily: root.fontFamily
           fontSize: Style.font.heading
           bordered: true
+          hasCursor: root.cursorActive
           onClicked: root.startDaemon()
+
+          Item {
+            id: daemonKeyCatcher
+            width: 0
+            height: 0
+            focus: true
+            Keys.priority: Keys.BeforeItem
+            Keys.onPressed: function(event) {
+              if (event.key === Qt.Key_Escape) {
+                root.close()
+                event.accepted = true
+              } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                var direction = (event.modifiers & Qt.ShiftModifier)
+                  || event.key === Qt.Key_Backtab ? -1 : 1
+                root.switchPanel(direction)
+                event.accepted = true
+              } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                         || event.key === Qt.Key_Space) {
+                root.startDaemon()
+                event.accepted = true
+              }
+            }
+          }
         }
       }
 
