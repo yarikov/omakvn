@@ -71,6 +71,12 @@ BarWidget {
     return null
   }
 
+  function pendingProfile() {
+    for (var i = 0; i < kvn.profiles.length; i++)
+      if (kvn.profiles[i].id === kvn.pendingProfileId) return kvn.profiles[i]
+    return null
+  }
+
   function lastProfile() {
     for (var i = 0; i < kvn.profiles.length; i++)
       if (kvn.profiles[i].id === kvn.lastProfileId) return kvn.profiles[i]
@@ -78,7 +84,8 @@ BarWidget {
   }
 
   function heroProfile() {
-    return activeProfile() || lastProfile() || (kvn.profiles.length > 0 ? kvn.profiles[0] : null)
+    return pendingProfile() || activeProfile() || lastProfile()
+      || (kvn.profiles.length > 0 ? kvn.profiles[0] : null)
   }
 
   function startDaemon() {
@@ -387,7 +394,10 @@ BarWidget {
             id: profileRow
             required property int index
             required property var modelData
-            readonly property bool isActive: modelData.id === kvn.activeProfileId
+            readonly property bool isRequested: modelData.id === kvn.pendingProfileId
+            readonly property bool isPending: kvn.busy && isRequested
+            readonly property bool isActive: kvn.pendingProfileId !== ""
+              ? isRequested : modelData.id === kvn.activeProfileId
             readonly property int logicalIndex: root.rowProfileStart + index
             readonly property bool isCursor: root.cursorActive && root.cursorIndex === logicalIndex
             width: profileList.width
@@ -436,7 +446,8 @@ BarWidget {
                 Text {
                   Layout.fillWidth: true
                   visible: profileRow.isActive
-                  text: "Connected"
+                  text: profileRow.isPending ? "Connecting…"
+                    : profileRow.isRequested ? "Disconnected" : "Connected"
                   color: root.foreground
                   elide: Text.ElideRight
                   font.family: root.fontFamily

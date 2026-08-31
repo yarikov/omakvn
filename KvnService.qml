@@ -18,6 +18,9 @@ Item {
   property string statusText: ""
   property bool statusIsError: false
   property string activeProfileId: ""
+  // Profile requested by the UI but not yet confirmed by the daemon. The
+  // daemon keeps reporting the previous active profile while it connects.
+  property string pendingProfileId: ""
   property string lastProfileId: ""
   // [{ id, name, protocol, latencyMs (number|null), testing }]
   property var profiles: []
@@ -50,7 +53,10 @@ Item {
   }
 
   function attach() { send({ cmd: "Attach" }) }
-  function connectProfile(id) { send({ cmd: "ConnectProfile", profile_id: id }) }
+  function connectProfile(id) {
+    if (send({ cmd: "ConnectProfile", profile_id: id }))
+      pendingProfileId = String(id)
+  }
   function disconnectVpn() { send({ cmd: "Disconnect" }) }
   function reconnect() { send({ cmd: "Reconnect" }) }
   function setRoutingMode(mode) { send({ cmd: "SetRoutingMode", mode: mode }) }
@@ -112,6 +118,11 @@ Item {
     statusText = String(snap.status || "")
     statusIsError = snap.status_is_error === true
     activeProfileId = snap.active_profile_id ? String(snap.active_profile_id) : ""
+    // Keep the requested profile after a failed attempt so the disconnected
+    // UI still reflects the user's latest selection. A successful connection
+    // promotes it to activeProfileId, at which point it is safe to clear.
+    if (connection === "Connected")
+      pendingProfileId = ""
 
     var settings = snap.settings || {}
     lastProfileId = settings.last_connected_profile
