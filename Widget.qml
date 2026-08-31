@@ -570,18 +570,16 @@ BarWidget {
             }
           }
           onClicked: root.openTui()
-        }
 
-        // Hidden focus catcher for keyboard navigation. Must live inside the
-        // panel content — the popup is its own window, so key events are
-        // delivered to the focused item within it.
-        Item {
-          id: keyCatcher
-          width: 0
-          height: 0
-          focus: true
-          Keys.priority: Keys.BeforeItem
-          Keys.onPressed: function(event) {
+          // Hidden focus catcher for keyboard navigation. Keeping it inside
+          // the button prevents it from adding another ColumnLayout gap.
+          Item {
+            id: keyCatcher
+            width: 0
+            height: 0
+            focus: true
+            Keys.priority: Keys.BeforeItem
+            Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Escape) {
               root.close()
               event.accepted = true
@@ -640,6 +638,7 @@ BarWidget {
             } else if (event.text === "t") {
               root.openTui()
               event.accepted = true
+            }
             }
           }
         }
