@@ -45,6 +45,8 @@ BarWidget {
   readonly property color urgent: bar ? bar.urgent : Color.urgent
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
+  readonly property int rowHorizontalPadding: Style.space(10)
+  readonly property int rowContentSpacing: Style.space(8)
 
   // All keyboard-selectable panel rows in order: hero toggle, profiles,
   // settings, then the footer button.
@@ -57,11 +59,6 @@ BarWidget {
   readonly property int rowAutoConnect: rowKillSwitch + 1
   readonly property int rowTui: rowAutoConnect + 1
   readonly property int rowCount: rowTui + 1
-  readonly property int profileRowHeight: Style.space(40)
-  readonly property int profileListSpacing: Style.space(2)
-  readonly property int visibleProfileRows: 6
-  readonly property int profileListHeight: visibleProfileRows * profileRowHeight
-    + (visibleProfileRows - 1) * profileListSpacing
   property int cursorIndex: 0
   property bool cursorActive: false
 
@@ -231,7 +228,7 @@ BarWidget {
     ColumnLayout {
       id: mainColumn
       anchors.fill: parent
-      spacing: Style.space(6)
+      spacing: Style.space(12)
 
       // --- daemon offline ---
       ColumnLayout {
@@ -250,7 +247,6 @@ BarWidget {
 
         Button {
           Layout.fillWidth: true
-          Layout.preferredHeight: Style.space(36)
           text: "Start daemon"
           foreground: root.foreground
           accent: Color.accent
@@ -265,7 +261,7 @@ BarWidget {
       ColumnLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
-        spacing: Style.space(6)
+        spacing: Style.space(12)
         visible: kvn.daemonUp
 
         // Hero: VPN icon, current/last profile and connection toggle. Mirrors
@@ -379,13 +375,14 @@ BarWidget {
         ListView {
           id: profileList
           Layout.fillWidth: true
-          Layout.fillHeight: true
-          Layout.preferredHeight: root.profileListHeight
-          implicitHeight: root.profileListHeight
+          Layout.preferredHeight: Math.min(contentHeight, Style.space(190))
+          Layout.maximumHeight: Style.space(190)
+          implicitHeight: Math.min(contentHeight, Style.space(190))
           visible: root.profileCount > 0
           clip: true
           boundsBehavior: Flickable.StopAtBounds
-          spacing: root.profileListSpacing
+          interactive: contentHeight > height
+          spacing: Style.space(4)
           model: kvn.profiles
 
           ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
@@ -401,7 +398,8 @@ BarWidget {
             readonly property int logicalIndex: root.rowProfileStart + index
             readonly property bool isCursor: root.cursorActive && root.cursorIndex === logicalIndex
             width: profileList.width
-            height: root.profileRowHeight
+            implicitHeight: profileContent.implicitHeight + Style.spacing.rowPaddingX
+            height: implicitHeight
             hasCursor: isCursor
             current: isActive
             foreground: root.foreground
@@ -426,9 +424,9 @@ BarWidget {
             RowLayout {
               id: profileContent
               anchors.fill: parent
-              anchors.leftMargin: Style.space(10)
-              anchors.rightMargin: Style.space(10)
-              spacing: Style.space(8)
+              anchors.leftMargin: root.rowHorizontalPadding
+              anchors.rightMargin: root.rowHorizontalPadding
+              spacing: root.rowContentSpacing
 
               ColumnLayout {
                 Layout.fillWidth: true
@@ -500,53 +498,54 @@ BarWidget {
           fontFamily: root.fontFamily
         }
 
-        PanelRow {
+        ColumnLayout {
           Layout.fillWidth: true
-          rowHeight: Style.space(30)
-          glyph: ""
-          label: "Routing"
-          valueText: "‹ " + root.modeLabel(kvn.routingMode) + " ›"
-          rowIndex: root.rowRouting
-          onActivated: root.cycleMode(true)
-          onStep: function(forward) { root.cycleMode(forward) }
-        }
+          spacing: Style.space(4)
 
-        PanelRow {
-          Layout.fillWidth: true
-          rowHeight: Style.space(30)
-          glyph: ""
-          label: "Region"
-          valueText: "‹ " + root.regionLabel(kvn.geoRegion) + " ›"
-          rowIndex: root.rowRegion
-          onActivated: root.cycleRegion(true)
-          onStep: function(forward) { root.cycleRegion(forward) }
-        }
-
-        PanelRow {
-          Layout.fillWidth: true
-          rowHeight: Style.space(30)
-          glyph: ""
-          label: "Kill switch"
-          showToggle: true
-          toggleChecked: kvn.killSwitch
-          toggleBusy: ksPending
-          rowIndex: root.rowKillSwitch
-          onActivated: {
-            ksRequested = !kvn.killSwitch
-            kvn.setKillSwitch(ksRequested)
-            ksTimeout.restart()
+          PanelRow {
+            Layout.fillWidth: true
+            glyph: ""
+            label: "Routing"
+            valueText: "‹ " + root.modeLabel(kvn.routingMode) + " ›"
+            rowIndex: root.rowRouting
+            onActivated: root.cycleMode(true)
+            onStep: function(forward) { root.cycleMode(forward) }
           }
-        }
 
-        PanelRow {
-          Layout.fillWidth: true
-          rowHeight: Style.space(30)
-          glyph: ""
-          label: "Auto-connect"
-          showToggle: true
-          toggleChecked: kvn.autoConnect
-          rowIndex: root.rowAutoConnect
-          onActivated: kvn.setAutoConnect(!kvn.autoConnect)
+          PanelRow {
+            Layout.fillWidth: true
+            glyph: ""
+            label: "Region"
+            valueText: "‹ " + root.regionLabel(kvn.geoRegion) + " ›"
+            rowIndex: root.rowRegion
+            onActivated: root.cycleRegion(true)
+            onStep: function(forward) { root.cycleRegion(forward) }
+          }
+
+          PanelRow {
+            Layout.fillWidth: true
+            glyph: ""
+            label: "Kill switch"
+            showToggle: true
+            toggleChecked: kvn.killSwitch
+            toggleBusy: ksPending
+            rowIndex: root.rowKillSwitch
+            onActivated: {
+              ksRequested = !kvn.killSwitch
+              kvn.setKillSwitch(ksRequested)
+              ksTimeout.restart()
+            }
+          }
+
+          PanelRow {
+            Layout.fillWidth: true
+            glyph: ""
+            label: "Auto-connect"
+            showToggle: true
+            toggleChecked: kvn.autoConnect
+            rowIndex: root.rowAutoConnect
+            onActivated: kvn.setAutoConnect(!kvn.autoConnect)
+          }
         }
 
         PanelSeparator {
@@ -557,7 +556,6 @@ BarWidget {
         // Footer: open the full TUI
         Button {
           Layout.fillWidth: true
-          Layout.preferredHeight: Style.space(30)
           text: "Open TUI"
           foreground: root.foreground
           accent: Color.accent
@@ -728,7 +726,6 @@ BarWidget {
     property string label: ""
     property string valueText: ""
     property bool rowEnabled: true
-    property int rowHeight: Style.space(34)
     property bool showToggle: false
     property bool toggleChecked: false
     property bool toggleBusy: false
@@ -736,7 +733,8 @@ BarWidget {
     readonly property bool isCursor: root.cursorActive && root.cursorIndex === rowIndex
 
     Layout.fillWidth: true
-    Layout.preferredHeight: rowHeight
+    implicitHeight: panelRowContent.implicitHeight + Style.spacing.rowPaddingX
+    Layout.preferredHeight: implicitHeight
     hasCursor: isCursor
     foreground: root.foreground
     accent: Color.accent
@@ -757,10 +755,11 @@ BarWidget {
     }
 
     RowLayout {
+      id: panelRowContent
       anchors.fill: parent
-      anchors.leftMargin: Style.space(10)
-      anchors.rightMargin: Style.space(10)
-      spacing: Style.space(8)
+      anchors.leftMargin: root.rowHorizontalPadding
+      anchors.rightMargin: root.rowHorizontalPadding
+      spacing: root.rowContentSpacing
 
       Text {
         text: row.glyph
