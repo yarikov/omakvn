@@ -390,21 +390,33 @@ BarWidget {
         }
 
         // Connection details grid — same shape as the Omarchy network panel.
-        GridLayout {
+        RowLayout {
           Layout.fillWidth: true
-          columns: 4
-          columnSpacing: Style.space(20)
-          rowSpacing: Style.spacing.labelGap
+          spacing: Style.space(20)
 
-          InfoLabel { text: "Receiving" }
-          DetailValue { text: root.formatRate(kvn.connected ? kvn.traffic.down : 0) }
-          InfoLabel { text: "Sending" }
-          DetailValue { text: root.formatRate(kvn.connected ? kvn.traffic.up : 0) }
+          GridLayout {
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            columns: 2
+            rowSpacing: Style.spacing.labelGap
 
-          InfoLabel { text: "Downloaded" }
-          DetailValue { text: root.formatBytes(kvn.connected ? kvn.traffic.downTotal : 0) }
-          InfoLabel { text: "Uploaded" }
-          DetailValue { text: root.formatBytes(kvn.connected ? kvn.traffic.upTotal : 0) }
+            InfoLabel { text: "Receiving" }
+            DetailValue { text: root.formatRate(kvn.connected ? kvn.traffic.down : 0) }
+            InfoLabel { text: "Downloaded" }
+            DetailValue { text: root.formatBytes(kvn.connected ? kvn.traffic.downTotal : 0) }
+          }
+
+          GridLayout {
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            columns: 2
+            rowSpacing: Style.spacing.labelGap
+
+            InfoLabel { text: "Sending" }
+            DetailValue { text: root.formatRate(kvn.connected ? kvn.traffic.up : 0) }
+            InfoLabel { text: "Uploaded" }
+            DetailValue { text: root.formatBytes(kvn.connected ? kvn.traffic.upTotal : 0) }
+          }
         }
 
         PanelSeparator {
