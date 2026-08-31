@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "Dmitry Yarikov",
   "license": "MIT",
-  "description": "kvn-tui VPN control in the Omarchy bar: connect/disconnect, profile picker, routing mode, geo region, kill switch, and auto-connect.",
+  "description": "Bring kvn-tui to your Omarchy bar with instant connection controls, profile switching, live traffic, smart routing, and kill switch access.",
   "kinds": [
     "bar-widget"
   ],
