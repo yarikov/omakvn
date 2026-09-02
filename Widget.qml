@@ -732,7 +732,7 @@ BarWidget {
       cursorActive = true
       cursorIndex = delta < 0 ? rowCount - 1 : 0
     } else {
-      cursorIndex = (cursorIndex + delta + rowCount) % rowCount
+      cursorIndex = Math.max(0, Math.min(rowCount - 1, cursorIndex + delta))
     }
     syncCursorView()
   }
