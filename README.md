@@ -59,16 +59,26 @@ service.
 
 ## Installation
 
-Install [`kvn-tui`](https://github.com/yarikov/kvn-tui#installation-arch-linux)
-first. The recommended setup for Omarchy is:
+Install `kvn-tui` and start its user service. Skip this step if it is already
+installed:
+
+```bash
+yay -S kvn-tui-bin
+systemctl --user enable --now kvn-tui.service
+```
+
+See the full [`kvn-tui` installation guide](https://github.com/yarikov/kvn-tui#installation-arch-linux)
+for other installation methods.
+
+Then set up the Omarchy integration as your regular user, without `sudo`:
 
 ```bash
 kvn-tui setup --omarchy
 ```
 
-On supported Omarchy versions, this installs and enables the native bar widget
-and configures the optional launcher keybinding and floating-window rule. Run
-the command as your regular user, without `sudo`.
+On supported Omarchy versions, the setup command installs and enables the native
+bar widget and configures the optional launcher keybinding and floating-window
+rule.
 
 Alternatively, install and enable `omakvn` directly from its repository:
 
