@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "yarikov.omakvn",
   "name": "kvn-tui VPN",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Dmitry Yarikov",
   "license": "MIT",
   "description": "Native Omarchy controls for kvn-tui, a sing-box VPN client for Arch Linux. Connect profiles, switch routing and regions, monitor live traffic, and control the kill switch from your bar.",
