@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "Dmitry Yarikov",
   "license": "MIT",
-  "description": "Bring kvn-tui to your Omarchy bar with instant connection controls, profile switching, live traffic, smart routing, and kill switch access.",
+  "description": "Native Omarchy controls for kvn-tui, a sing-box VPN client for Arch Linux. Connect profiles, switch routing and regions, monitor live traffic, and control the kill switch from your bar.",
   "kinds": [
     "bar-widget"
   ],
@@ -14,7 +14,7 @@
   },
   "barWidget": {
     "displayName": "kvn-tui VPN",
-    "description": "Toggle the VPN, pick a profile, switch routing mode and region, kill switch, auto-connect.",
+    "description": "Control kvn-tui from the bar: connect profiles, switch routing and regions, view live traffic, and manage kill switch and auto-connect.",
     "category": "Network",
     "allowMultiple": false,
     "defaultSection": "right"

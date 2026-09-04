@@ -1,66 +1,93 @@
-# omakvn
+# kvn-tui VPN for Omarchy
 
-Native [Omarchy 4](https://omarchy.org/) Quickshell bar plugin for
-[kvn-tui](https://github.com/yarikov/kvn-tui).
+**VPN in your Omarchy bar. Full control in your terminal.**
 
-The widget shows the live VPN state and traffic, lets you connect or switch
-profiles, and exposes routing mode, geo region, kill switch, and auto-connect
-controls directly from the bar.
+`omakvn` is the native [Omarchy 4](https://omarchy.org/) bar integration for
+[`kvn-tui`](https://github.com/yarikov/kvn-tui), a keyboard-driven VPN client
+for Arch Linux built on top of [sing-box](https://sing-box.sagernet.org/).
+
+Use the bar for everyday VPN controls, and open the full TUI when you need
+advanced configuration.
 
 ![omakvn plugin preview](preview.png)
 
-## Quick start
+## What you can do from the Omarchy bar
 
-1. Follow the full [`kvn-tui` installation guide](https://github.com/yarikov/kvn-tui#installation-arch-linux),
-   or install the AUR package and start its user service:
+- Connect, disconnect, and reconnect the VPN
+- Switch VPN profiles
+- Change routing mode
+- Switch geo region
+- Monitor connection state, live traffic rates, totals, and active connections
+- Toggle the kill switch
+- Control auto-connect
+- Open the full `kvn-tui` interface
 
-   ```bash
-   yay -S kvn-tui-bin
-   systemctl --user enable --now kvn-tui.service
-   ```
+## What is kvn-tui?
 
-2. Install and enable the widget:
+`kvn-tui` is the main VPN application behind this plugin. It runs a background
+daemon that manages the VPN connection and exposes its state to both the
+terminal UI and the Omarchy bar integration. That means you can close the TUI
+and keep the VPN running.
 
-   ```bash
-   omarchy plugin add https://github.com/yarikov/omakvn.git --enable
-   ```
+Use the full `kvn-tui` interface for tasks such as:
 
-3. Click the shield in the Omarchy bar and select a VPN profile.
+- Adding and managing VPN profiles
+- Importing share links and subscriptions
+- Advanced routing configuration
+- DNS configuration
+- Latency testing
+- Connection monitoring
+- Logs and diagnostics
 
-No profiles yet? Open `kvn-tui`, press `p`, and paste a VPN share link or
-subscription URL.
+## How it works
 
-## Features
+```text
+                kvn-tui daemon
+                      │
+              manages sing-box
+                      │
+          ┌───────────┴───────────┐
+          │                       │
+      kvn-tui TUI             omakvn
+    full configuration      Omarchy bar controls
+```
 
-- Connect, disconnect, reconnect, and switch VPN profiles from the bar.
-- See the active profile, connection state, live traffic rates, totals, and
-  active connection count at a glance.
-- Change geo region and routing mode without opening the full TUI.
-- Toggle the kill switch and auto-connect settings.
-- Open the complete `kvn-tui` interface when advanced controls are needed.
+Both interfaces talk to the same `kvn-tui` daemon over its user-only Unix
+socket. `omakvn` does not implement VPN protocols or manage the tunnel
+independently—it provides native Omarchy controls for the existing `kvn-tui`
+service.
 
-## Requirements
+## Installation
 
-- Omarchy 4 with Shell plugin support
-- [`kvn-tui`](https://github.com/yarikov/kvn-tui#installation-arch-linux)
-  0.27.0 or newer, installed and available on `PATH`
+Install [`kvn-tui`](https://github.com/yarikov/kvn-tui#installation-arch-linux)
+first. The recommended setup for Omarchy is:
 
-## Install
+```bash
+kvn-tui setup --omarchy
+```
+
+On supported Omarchy versions, this installs and enables the native bar widget
+and configures the optional launcher keybinding and floating-window rule. Run
+the command as your regular user, without `sudo`.
+
+Alternatively, install and enable `omakvn` directly from its repository:
 
 ```bash
 omarchy plugin add https://github.com/yarikov/omakvn.git --enable
 ```
 
-The plugin is placed in the right bar section by default. It can also be moved
-after installation:
+This installs only the bar widget; `kvn-tui` must already be installed and
+available on `PATH`.
 
-```bash
-omarchy bar move yarikov.omakvn --section right
-```
+## First connection
 
-This command installs only the bar widget. Alternatively,
-`kvn-tui setup --omarchy` installs and enables the widget and configures the
-optional launcher keybinding and floating-window rule.
+If you do not have any VPN profiles yet:
+
+1. Open `kvn-tui`.
+2. Press `p` to open profile management.
+3. Add a VPN share link or subscription.
+4. Connect to the profile.
+5. Use the Omarchy bar for quick controls afterward.
 
 ## Usage
 
@@ -82,36 +109,30 @@ optional launcher keybinding and floating-window rule.
 | `Tab` / `Shift+Tab` | Switch between bar panels |
 | `Escape` | Close the panel |
 
-The plugin communicates with the `kvn-tui` daemon over its user-only Unix
-socket. It does not implement VPN protocols or manage the tunnel itself.
+## Why omakvn?
+
+The goal is not to replicate the entire terminal interface inside a bar widget.
+
+Use the **Omarchy bar** for fast, frequent actions. Use **kvn-tui** for full VPN
+configuration and management.
+
+One VPN daemon, two native interfaces.
+
+## Requirements
+
+- Omarchy 4 with Shell plugin support
+- [`kvn-tui`](https://github.com/yarikov/kvn-tui#installation-arch-linux)
+  0.27.0 or newer, installed and available on `PATH`
+
+`kvn-tui` uses sing-box as its VPN backend and installs it automatically through
+the supported installation flow. Quickshell is provided by Omarchy Shell.
 
 ## Troubleshooting
 
-### The daemon is not running
-
-Click **Start daemon** in the widget or start and enable the service manually:
-
-```bash
-systemctl --user enable --now kvn-tui.service
-```
-
-Run the built-in read-only diagnostics if it does not start:
+Run the built-in read-only diagnostics:
 
 ```bash
 kvn-tui doctor
-```
-
-### No profiles are shown
-
-Open `kvn-tui` and press `p` to import a VPN share link or subscription URL.
-
-### The widget is installed but missing from the bar
-
-Add it to the right section and ask the shell to rescan installed plugins:
-
-```bash
-omarchy bar put yarikov.omakvn --section right
-omarchy-shell shell rescanPlugins
 ```
 
 ## Update
@@ -125,6 +146,11 @@ omarchy plugin update yarikov.omakvn
 ```bash
 omarchy plugin remove yarikov.omakvn
 ```
+
+## Projects
+
+- Main application: [`yarikov/kvn-tui`](https://github.com/yarikov/kvn-tui)
+- Omarchy integration: [`yarikov/omakvn`](https://github.com/yarikov/omakvn)
 
 ## Development
 
