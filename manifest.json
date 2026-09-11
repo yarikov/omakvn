@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "yarikov.omakvn",
-  "name": "kvn-tui VPN",
+  "name": "kvn TUI VPN",
   "version": "1.0.1",
   "author": "Dmitry Yarikov",
   "license": "MIT",
-  "description": "Native Omarchy controls for kvn-tui, a sing-box VPN client for Arch Linux. Connect profiles, switch routing and regions, monitor live traffic, and control the kill switch from your bar.",
+  "description": "Native Omarchy bar integration for kvn, a terminal VPN client for Arch Linux.",
   "kinds": [
     "bar-widget"
   ],
@@ -13,8 +13,8 @@
     "barWidget": "Widget.qml"
   },
   "barWidget": {
-    "displayName": "kvn-tui VPN",
-    "description": "Control kvn-tui from the bar: connect profiles, switch routing and regions, view live traffic, and manage kill switch and auto-connect.",
+    "displayName": "kvn TUI VPN",
+    "description": "Connect, switch profiles, control routing, and monitor your VPN from the bar.",
     "category": "Network",
     "allowMultiple": false,
     "defaultSection": "right"
