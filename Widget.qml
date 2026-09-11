@@ -262,6 +262,7 @@ BarWidget {
 
         Text {
           Layout.fillWidth: true
+          textFormat: Text.PlainText
           text: "The kvn-tui daemon is not running. Start it to control the VPN from the bar."
           color: root.dim
           wrapMode: Text.Wrap
@@ -320,6 +321,7 @@ BarWidget {
 
           Text {
             id: heroIcon
+            textFormat: Text.PlainText
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             text: kvn.daemonUp && kvn.connected ? "󰦝" : "󰦜"
@@ -365,6 +367,7 @@ BarWidget {
 
             Text {
               width: parent.width
+              textFormat: Text.PlainText
               text: {
                 var profile = root.heroProfile()
                 return profile ? profile.name : "No profiles"
@@ -378,6 +381,7 @@ BarWidget {
 
             Text {
               width: parent.width
+              textFormat: Text.PlainText
               text: kvn.busy ? "CONNECTING…" : (kvn.connected ? "CONNECTED" : "DISCONNECTED")
               color: root.dim
               font.family: root.fontFamily
@@ -494,6 +498,7 @@ BarWidget {
 
                 Text {
                   Layout.fillWidth: true
+                  textFormat: Text.PlainText
                   text: profileRow.modelData.name
                   color: root.foreground
                   elide: Text.ElideMiddle
@@ -503,6 +508,7 @@ BarWidget {
 
                 Text {
                   Layout.fillWidth: true
+                  textFormat: Text.PlainText
                   visible: profileRow.isActive
                   text: profileRow.isPending ? "Connecting…"
                     : profileRow.isRequested ? "Disconnected" : "Connected"
@@ -514,6 +520,7 @@ BarWidget {
               }
 
               Text {
+                textFormat: Text.PlainText
                 text: profileRow.modelData.protocol
                 color: root.dim
                 font.family: root.fontFamily
@@ -522,6 +529,7 @@ BarWidget {
               }
 
               Text {
+                textFormat: Text.PlainText
                 text: profileRow.modelData.testing ? "…"
                   : profileRow.modelData.latencyMs === undefined ? ""
                   : profileRow.modelData.latencyMs === null ? "unreachable"
@@ -535,6 +543,7 @@ BarWidget {
 
           Text {
             anchors.centerIn: parent
+            textFormat: Text.PlainText
             width: parent.width - Style.space(16)
             visible: root.profileCount === 0
             text: "No profiles. Add them with `kvn-tui` (p to paste a link)."
@@ -772,6 +781,7 @@ BarWidget {
   // Dim label / right-aligned value pair, styled like the Omarchy network
   // panel's connection-details grid.
   component InfoLabel: Text {
+    textFormat: Text.PlainText
     color: root.foreground
     opacity: 0.6
     font.family: root.fontFamily
@@ -779,6 +789,7 @@ BarWidget {
   }
 
   component DetailValue: Text {
+    textFormat: Text.PlainText
     color: root.foreground
     font.family: root.fontFamily
     font.pixelSize: Style.font.bodySmall
@@ -831,6 +842,7 @@ BarWidget {
       spacing: root.rowContentSpacing
 
       Text {
+        textFormat: Text.PlainText
         text: row.glyph
         visible: row.glyph !== ""
         color: root.dim
@@ -840,6 +852,7 @@ BarWidget {
 
       Text {
         Layout.fillWidth: true
+        textFormat: Text.PlainText
         text: row.label
         color: root.foreground
         elide: Text.ElideMiddle
@@ -848,6 +861,7 @@ BarWidget {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: !row.showToggle && row.valueText !== ""
         text: row.valueText
         color: root.dim
