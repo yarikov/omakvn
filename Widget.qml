@@ -711,8 +711,8 @@ BarWidget {
             } else if (event.text === "r") {
               if (kvn.connected) kvn.reconnect()
               event.accepted = true
-            } else if (event.text === "a") {
-              kvn.setAutoConnect(!kvn.autoConnect)
+            } else if (event.key === Qt.Key_A && (event.modifiers & Qt.ShiftModifier)) {
+              root.activateRow(root.rowAutoConnect)
               event.accepted = true
             } else if (event.text === "t") {
               root.openTui()

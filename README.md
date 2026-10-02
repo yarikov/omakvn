@@ -54,8 +54,8 @@ omarchy plugin remove yarikov.omakvn
 | `h` / `l`, left/right | Change the selected routing mode or region |
 | `s` | Disconnect |
 | `r` | Reconnect |
-| `a` | Toggle auto-connect |
-| `K` | Toggle the kill switch |
+| `Shift+A` | Toggle auto-connect |
+| `Shift+K` | Toggle the kill switch |
 | `t` | Open the full TUI |
 | `Tab` / `Shift+Tab` | Switch between bar panels |
 | `Escape` | Close the panel |
