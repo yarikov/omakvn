@@ -110,6 +110,21 @@ BarWidget {
     onExited: kvn.reconnectSocket()
   }
 
+  readonly property string installUrl: "https://github.com/yarikov/kvn#installation-arch-linux"
+  readonly property string installCommand:
+    "yay -S kvn-tui-bin && systemctl --user enable --now kvn-tui.service"
+
+  function openInstallPage() {
+    Quickshell.execDetached(["xdg-open", root.installUrl])
+    root.close()
+  }
+
+  // Offline panel action: install guide when kvn is missing, else start it.
+  function activateOffline() {
+    if (kvn.missing) openInstallPage()
+    else startDaemon()
+  }
+
   function openTui() {
     var command = "omarchy-launch-or-focus-tui --app-id=org.omarchy.kvn-tui kvn-tui"
     if (root.bar) root.bar.run(command)
@@ -122,6 +137,10 @@ BarWidget {
   }
 
   function toggleVpn() {
+    if (kvn.missing) {
+      root.open()
+      return
+    }
     if (!kvn.daemonUp) {
       startDaemon()
       return
@@ -187,6 +206,7 @@ BarWidget {
   onPopupOpenChanged: {
     gPending = false
     if (popupOpen) {
+      kvn.checkInstalled()
       cursorActive = !kvn.daemonUp
       cursorIndex = rowVpnToggle
       Qt.callLater(function() {
@@ -205,6 +225,7 @@ BarWidget {
     text: kvn.daemonUp && kvn.connected ? "󰦝" : "󰦜"
     fontFamily: root.fontFamily
     tooltipText: {
+      if (kvn.missing) return "kvn — not installed (click for setup)"
       if (!kvn.daemonUp) return "kvn-tui — daemon not running (click to start)"
       if (kvn.connected) {
         var p = root.activeProfile()
@@ -222,7 +243,8 @@ BarWidget {
       if (b === Qt.LeftButton) {
         root.toggle()
       } else if (b === Qt.MiddleButton) {
-        root.openTui()
+        if (kvn.missing) root.open()
+        else root.openTui()
       } else {
         root.toggleVpn()
       }
@@ -263,23 +285,40 @@ BarWidget {
         Text {
           Layout.fillWidth: true
           textFormat: Text.PlainText
-          text: "The kvn-tui daemon is not running. Start it to control the VPN from the bar."
+          text: kvn.missing
+            ? "kvn is not installed. Install it to control the VPN from the bar:"
+            : "The kvn-tui daemon is not running. Start it to control the VPN from the bar."
           color: root.dim
           wrapMode: Text.Wrap
           font.family: root.fontFamily
           font.pixelSize: Style.font.body
         }
 
+        TextEdit {
+          Layout.fillWidth: true
+          visible: kvn.missing
+          readOnly: true
+          selectByMouse: true
+          textFormat: TextEdit.PlainText
+          text: root.installCommand
+          color: root.foreground
+          selectionColor: Style.selectionFillFor(root.foreground, Color.accent)
+          selectedTextColor: root.foreground
+          wrapMode: TextEdit.Wrap
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.body
+        }
+
         Button {
           Layout.fillWidth: true
-          text: "Start daemon"
+          text: kvn.missing ? "Installation guide" : "Start daemon"
           foreground: root.foreground
           accent: Color.accent
           fontFamily: root.fontFamily
           fontSize: Style.font.heading
           bordered: true
           hasCursor: root.cursorActive
-          onClicked: root.startDaemon()
+          onClicked: root.activateOffline()
 
           Item {
             id: daemonKeyCatcher
@@ -298,7 +337,7 @@ BarWidget {
                 event.accepted = true
               } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter
                          || event.key === Qt.Key_Space) {
-                root.startDaemon()
+                root.activateOffline()
                 event.accepted = true
               }
             }
@@ -662,7 +701,7 @@ BarWidget {
             }
             if (!kvn.daemonUp) {
               if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                root.startDaemon()
+                root.activateOffline()
                 event.accepted = true
               }
               return

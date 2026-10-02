@@ -13,6 +13,12 @@ Item {
 
   // --- state mirrored from the latest snapshot -----------------------------
   property bool daemonUp: false
+  // Whether `kvn-tui` is on PATH. Optimistic until the first check finishes so
+  // the "not installed" state never flashes when kvn is present.
+  property bool installed: true
+  // A responding daemon proves kvn is present even when `kvn-tui` is not on
+  // this shell's PATH, so only report it missing while the daemon is down.
+  readonly property bool missing: !installed && !daemonUp
   // Idle | Connecting | ConnectPending | Connected
   property string connection: "Idle"
   property string statusText: ""
@@ -98,6 +104,25 @@ Item {
     onTriggered: bridgeLoader.active = true
   }
 
+  function checkInstalled() {
+    if (!installCheck.running) installCheck.running = true
+  }
+
+  Process {
+    id: installCheck
+    command: ["sh", "-c", "command -v kvn-tui"]
+    running: true
+    onExited: function(exitCode) { root.installed = exitCode === 0 }
+  }
+
+  // Pick up an install made after the plugin started.
+  Timer {
+    interval: 10000
+    repeat: true
+    running: !root.installed
+    onTriggered: root.checkInstalled()
+  }
+
   // Resolving the UID only matters when XDG_RUNTIME_DIR is unset (rare);
   // `id -u` runs once at startup.
   Process {
@@ -128,9 +153,10 @@ Item {
   }
 
   // Flip the link off and on until the daemon answers. A failed connect
-  // leaves the Socket dead — it does not retry on its own.
+  // leaves the Socket dead — it does not retry on its own. Back off while
+  // `kvn-tui` is not found, but keep trying in case the daemon runs anyway.
   Timer {
-    interval: 1000
+    interval: root.installed ? 1000 : 10000
     repeat: true
     running: !root.daemonUp && root.socketPath !== ""
     onTriggered: root.reconnectSocket()
