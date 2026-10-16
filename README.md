@@ -62,6 +62,10 @@ omarchy plugin remove yarikov.omakvn
 
 The panel can be used entirely with the keyboard or mouse.
 
+### Before onboarding is finished
+
+Until you finish the first-run tour in `kvn`, the widget changes nothing: the panel only asks you to finish onboarding and offers to open `kvn`. `Enter`, `Space` or `t` opens it, and a right click opens the panel instead of connecting.
+
 ## Credits
 
 The original Omarchy integration was contributed by [Denis Chupritskiy](https://github.com/chupre).

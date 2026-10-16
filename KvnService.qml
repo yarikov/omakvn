@@ -36,6 +36,9 @@ Item {
   property string routingMode: "global"
   property bool killSwitch: false
   property bool autoConnect: false
+  // Set only by an explicit `onboarding_complete: false`: a daemon that
+  // predates the field never reports it, and must not lock the widget.
+  property bool onboardingPending: false
   property var traffic: ({ up: 0, down: 0, upTotal: 0, downTotal: 0, conns: 0 })
 
   // The bridge frames raw socket bytes before UTF-8 decoding and emits
@@ -60,6 +63,7 @@ Item {
     statusIsError = false
     activeProfileId = ""
     pendingProfileId = ""
+    onboardingPending = false
     traffic = ({ up: 0, down: 0, upTotal: 0, downTotal: 0, conns: 0 })
     _socketBuffer = ""
     _discardingOversizeLine = false
@@ -213,6 +217,8 @@ Item {
     if (!snap || typeof snap !== "object" || Array.isArray(snap)
         || snap.connection === undefined) return
 
+    // Before daemonUp, so the panel it reveals is already the right one.
+    onboardingPending = snap.onboarding_complete === false
     // A valid snapshot is definitive proof that the daemon is reachable.
     // The socket can connect during component construction, before QML sees
     // connectionStateChanged, so do not rely on that signal alone.

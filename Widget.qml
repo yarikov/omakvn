@@ -16,6 +16,8 @@ pragma ComponentBehavior: Bound
 // Left click: open the control panel (profiles + settings).
 // Right click: quick toggle VPN (last profile) / disconnect.
 // Middle click: open the full TUI.
+// Until kvn's first-run tour is finished the panel only offers to open the
+// TUI, and no click or key sends a command to the daemon.
 BarWidget {
   id: root
   moduleName: "yarikov.omakvn"
@@ -23,19 +25,22 @@ BarWidget {
   KvnService {
     id: kvn
     onDaemonUpChanged: {
-      if (!daemonUp) {
-        root.close()
-      } else if (root.popupOpen) {
-        // The offline focus target is hidden when the daemon comes up.
-        // Move focus to the now-visible online key handler immediately.
-        root.cursorActive = false
-        root.cursorIndex = root.rowVpnToggle
-        Qt.callLater(function() {
-          if (root.popupOpen && popup.focusTarget)
-            popup.focusTarget.forceActiveFocus()
-        })
-      }
+      if (!daemonUp) root.close()
+      else root.refocusPanel()
     }
+    onOnboardingPendingChanged: root.refocusPanel()
+  }
+
+  // The visible panel changed under an open popup: its focus target is now
+  // hidden, so move focus to the panel that replaced it.
+  function refocusPanel() {
+    if (!popupOpen) return
+    cursorActive = kvn.onboardingPending
+    cursorIndex = rowVpnToggle
+    Qt.callLater(function() {
+      if (root.popupOpen && popup.focusTarget)
+        popup.focusTarget.forceActiveFocus()
+    })
   }
 
   property bool popupOpen: false
@@ -145,6 +150,10 @@ BarWidget {
       startDaemon()
       return
     }
+    if (kvn.onboardingPending) {
+      root.open()
+      return
+    }
     if (kvn.connected) {
       kvn.disconnectVpn()
     } else {
@@ -207,7 +216,7 @@ BarWidget {
     gPending = false
     if (popupOpen) {
       kvn.checkInstalled()
-      cursorActive = !kvn.daemonUp
+      cursorActive = !kvn.daemonUp || kvn.onboardingPending
       cursorIndex = rowVpnToggle
       Qt.callLater(function() {
         if (root.popupOpen) popup.focusTarget.forceActiveFocus()
@@ -227,6 +236,7 @@ BarWidget {
     tooltipText: {
       if (kvn.missing) return "kvn — not installed (click for setup)"
       if (!kvn.daemonUp) return "kvn-tui — daemon not running (click to start)"
+      if (kvn.onboardingPending) return "kvn — finish onboarding (click to open)"
       if (kvn.connected) {
         var p = root.activeProfile()
         return "kvn-tui — connected to " + (p ? p.name : "profile")
@@ -267,7 +277,8 @@ BarWidget {
     bar: root.bar
     owner: root
     open: root.popupOpen
-    focusTarget: kvn.daemonUp ? keyCatcher : daemonKeyCatcher
+    focusTarget: !kvn.daemonUp ? daemonKeyCatcher
+      : kvn.onboardingPending ? onboardingKeyCatcher : keyCatcher
     contentWidth: fittedContentWidth(Style.space(380))
     contentHeight: fittedContentHeight(mainColumn.implicitHeight)
 
@@ -345,12 +356,64 @@ BarWidget {
         }
       }
 
+      // --- first-run tour not finished: kvn owns every setting until then ---
+      ColumnLayout {
+        Layout.fillWidth: true
+        spacing: Style.space(10)
+        visible: kvn.daemonUp && kvn.onboardingPending
+
+        Text {
+          Layout.fillWidth: true
+          textFormat: Text.PlainText
+          text: "Finish onboarding in kvn to control the VPN from the bar."
+          color: root.dim
+          wrapMode: Text.Wrap
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.body
+        }
+
+        Button {
+          Layout.fillWidth: true
+          text: "Open TUI"
+          foreground: root.foreground
+          accent: Color.accent
+          fontFamily: root.fontFamily
+          fontSize: Style.font.heading
+          bordered: true
+          hasCursor: root.cursorActive
+          onClicked: root.openTui()
+
+          Item {
+            id: onboardingKeyCatcher
+            width: 0
+            height: 0
+            focus: true
+            Keys.priority: Keys.BeforeItem
+            Keys.onPressed: function(event) {
+              if (event.key === Qt.Key_Escape) {
+                root.close()
+                event.accepted = true
+              } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                var direction = (event.modifiers & Qt.ShiftModifier)
+                  || event.key === Qt.Key_Backtab ? -1 : 1
+                root.switchPanel(direction)
+                event.accepted = true
+              } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                         || event.key === Qt.Key_Space || event.text === "t") {
+                root.openTui()
+                event.accepted = true
+              }
+            }
+          }
+        }
+      }
+
       // --- main panel ---
       ColumnLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         spacing: Style.space(12)
-        visible: kvn.daemonUp
+        visible: kvn.daemonUp && !kvn.onboardingPending
 
         // Hero: VPN icon, current/last profile and connection toggle. Mirrors
         // the Omarchy network panel's Wi-Fi header.
