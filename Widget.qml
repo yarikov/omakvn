@@ -11,7 +11,7 @@ pragma ComponentBehavior: Bound
 // kvn-tui bar widget.
 //
 // Icon states: dim shield = disconnected, full-color shield = connected,
-// pulsing = connecting, urgent = last error.
+// pulsing = connecting.
 //
 // Left click: open the control panel (profiles + settings).
 // Right click: quick toggle VPN (last profile) / disconnect.
@@ -61,7 +61,6 @@ BarWidget {
   }
 
   readonly property color foreground: bar ? bar.foreground : Color.foreground
-  readonly property color urgent: bar ? bar.urgent : Color.urgent
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
   readonly property int rowHorizontalPadding: Style.space(10)
@@ -427,7 +426,7 @@ BarWidget {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             text: kvn.daemonUp && kvn.connected ? "󰦝" : "󰦜"
-            color: kvn.statusIsError ? root.urgent : (kvn.connected ? root.foreground : root.dim)
+            color: kvn.connected ? root.foreground : root.dim
             font.family: root.fontFamily
             font.pixelSize: Style.font.display
           }

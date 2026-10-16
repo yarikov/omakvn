@@ -21,8 +21,6 @@ Item {
   readonly property bool missing: !installed && !daemonUp
   // Idle | Connecting | ConnectPending | Connected
   property string connection: "Idle"
-  property string statusText: ""
-  property bool statusIsError: false
   property string activeProfileId: ""
   // Profile requested by the UI but not yet confirmed by the daemon. The
   // daemon keeps reporting the previous active profile while it connects.
@@ -59,8 +57,6 @@ Item {
   function markDaemonDown() {
     daemonUp = false
     connection = "Idle"
-    statusText = ""
-    statusIsError = false
     activeProfileId = ""
     pendingProfileId = ""
     onboardingPending = false
@@ -225,8 +221,6 @@ Item {
     daemonUp = true
 
     connection = boundedString(snap.connection)
-    statusText = boundedString(snap.status)
-    statusIsError = snap.status_is_error === true
     activeProfileId = boundedString(snap.active_profile_id)
     // Keep the requested profile after a failed attempt so the disconnected
     // UI still reflects the user's latest selection. A successful connection
