@@ -51,7 +51,7 @@ omarchy plugin remove yarikov.omakvn
 | `j` / `k`, up/down | Move between controls |
 | `gg` / `G` | Jump to the first or last control |
 | `Enter` / `Space` | Activate the selected control |
-| `h` / `l`, left/right | Change the selected routing mode or region |
+| `h` / `l`, left/right | Change the routing mode |
 | `s` | Disconnect |
 | `r` | Reconnect |
 | `Shift+A` | Toggle auto-connect |

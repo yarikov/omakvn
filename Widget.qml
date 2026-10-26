@@ -72,8 +72,7 @@ BarWidget {
   readonly property int rowVpnToggle: 0
   readonly property int rowProfileStart: 1
   readonly property int rowRouting: rowProfileStart + profileCount
-  readonly property int rowRegion: rowRouting + 1
-  readonly property int rowKillSwitch: rowRegion + 1
+  readonly property int rowKillSwitch: rowRouting + 1
   readonly property int rowAutoConnect: rowKillSwitch + 1
   readonly property int rowTui: rowAutoConnect + 1
   readonly property int rowCount: rowTui + 1
@@ -162,40 +161,18 @@ BarWidget {
     }
   }
 
-  // Geo region cycle order mirrors GeoRegion::ALL in the Rust model.
-  readonly property var regionCycle: ["ru", "cn", "ir", "global"]
-
-  function availableModes(region) {
-    if (region !== "" && region !== "global")
-      return ["global", "bypass_" + region, "only_" + region]
-    return ["global"]
-  }
-
   function modeLabel(mode) {
-    if (mode === "global") return "Global"
-    var parts = mode.split("_")
-    var code = { "ru": "RU", "cn": "CN", "ir": "IR", "global": "Global" }[parts[1]] || parts[1].toUpperCase()
-    return (parts[0] === "bypass" ? "Bypass " : "Only ") + code
-  }
-
-  function regionLabel(region) {
-    if (region === "") return "Not set"
-    return { "ru": "RU", "cn": "CN", "ir": "IR", "global": "Global" }[region] || region.toUpperCase()
+    for (var i = 0; i < kvn.routingModes.length; i++)
+      if (kvn.routingModes[i].id === mode) return kvn.routingModes[i].name
+    return mode
   }
 
   function cycleMode(forward) {
-    var modes = availableModes(kvn.geoRegion)
+    var modes = kvn.routingModes.map(function(m) { return m.id })
     var idx = modes.indexOf(kvn.routingMode)
     if (idx === -1) idx = 0
     var next = modes[(idx + (forward ? 1 : modes.length - 1)) % modes.length]
     if (next !== kvn.routingMode) kvn.setRoutingMode(next)
-  }
-
-  function cycleRegion(forward) {
-    var idx = regionCycle.indexOf(kvn.geoRegion)
-    if (idx === -1) idx = regionCycle.length - 1
-    var next = regionCycle[(idx + (forward ? 1 : regionCycle.length - 1)) % regionCycle.length]
-    if (next !== kvn.geoRegion) kvn.setGeoRegion(next)
   }
 
   function formatBytes(bytes) {
@@ -676,20 +653,10 @@ BarWidget {
             Layout.fillWidth: true
             glyph: ""
             label: "Routing"
-            valueText: "‹ " + root.modeLabel(kvn.routingMode) + " ›"
+            valueText: root.modeLabel(kvn.routingMode)
             rowIndex: root.rowRouting
             onActivated: root.cycleMode(true)
             onStep: function(forward) { root.cycleMode(forward) }
-          }
-
-          PanelRow {
-            Layout.fillWidth: true
-            glyph: ""
-            label: "Region"
-            valueText: "‹ " + root.regionLabel(kvn.geoRegion) + " ›"
-            rowIndex: root.rowRegion
-            onActivated: root.cycleRegion(true)
-            onStep: function(forward) { root.cycleRegion(forward) }
           }
 
           PanelRow {
@@ -861,8 +828,6 @@ BarWidget {
         kvn.connectProfile(kvn.profiles[profileIndex].id)
     } else if (index === rowRouting) {
       cycleMode(true)
-    } else if (index === rowRegion) {
-      cycleRegion(true)
     } else if (index === rowKillSwitch) {
       ksRequested = !kvn.killSwitch
       kvn.setKillSwitch(ksRequested)
@@ -876,7 +841,6 @@ BarWidget {
 
   function stepRow(index, forward) {
     if (index === rowRouting) cycleMode(forward)
-    else if (index === rowRegion) cycleRegion(forward)
   }
 
   // Dim label / right-aligned value pair, styled like the Omarchy network
@@ -943,6 +907,7 @@ BarWidget {
       spacing: root.rowContentSpacing
 
       Text {
+        id: rowGlyph
         textFormat: Text.PlainText
         text: row.glyph
         visible: row.glyph !== ""
@@ -952,6 +917,7 @@ BarWidget {
       }
 
       Text {
+        id: rowLabel
         Layout.fillWidth: true
         textFormat: Text.PlainText
         text: row.label
@@ -961,10 +927,30 @@ BarWidget {
         font.pixelSize: Style.font.body
       }
 
+      // The cycled value gives way to the label: it takes what the glyph and
+      // the full label leave, and a long value loses its end, not the arrows.
+      TextMetrics {
+        id: cyclerArrows
+        font: rowValue.font
+        text: "‹  ›"
+      }
+
+      TextMetrics {
+        id: cyclerValue
+        font: rowValue.font
+        text: row.valueText
+        elide: Text.ElideRight
+        elideWidth: Math.max(0, rowValue.Layout.maximumWidth - cyclerArrows.advanceWidth)
+      }
+
       Text {
+        id: rowValue
+        Layout.maximumWidth: Math.max(0, panelRowContent.width
+          - (rowGlyph.visible ? rowGlyph.implicitWidth + panelRowContent.spacing : 0)
+          - rowLabel.implicitWidth - panelRowContent.spacing)
         textFormat: Text.PlainText
         visible: !row.showToggle && row.valueText !== ""
-        text: row.valueText
+        text: "‹ " + cyclerValue.elidedText + " ›"
         color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
