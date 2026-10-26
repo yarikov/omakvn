@@ -28,9 +28,10 @@ Item {
   property string lastProfileId: ""
   // [{ id, name, protocol, latencyMs (number|null), testing }]
   property var profiles: []
-  // Persisted geo routing state; the active mode is derived the same way the
-  // Rust model derives it: selected_region_modes[current_region] ?? "global".
-  property string geoRegion: "" // "ru" | "cn" | "ir" | "global" | "" (unset)
+  // Routing modes of routing.json, in file order: [{ id, name }]. A daemon
+  // that predates snapshot.routing gets the modes of its current region.
+  property var routingModes: [{ id: "global", name: "Global" }]
+  // Id of the selected mode; one missing from routingModes runs as global.
   property string routingMode: "global"
   property bool killSwitch: false
   property bool autoConnect: false
@@ -44,6 +45,7 @@ Item {
   readonly property int maxSocketLineLength: 16 * 1024 * 1024
   readonly property int maxExternalStringLength: 1024
   readonly property int maxProfiles: 4096
+  readonly property int maxRoutingModes: 1024
   readonly property string bridgePath: {
     var url = String(Qt.resolvedUrl("ipc_bridge.py"))
     return decodeURIComponent(url.replace(/^file:\/\//, ""))
@@ -88,7 +90,6 @@ Item {
   function disconnectVpn() { send({ cmd: "Disconnect" }) }
   function reconnect() { send({ cmd: "Reconnect" }) }
   function setRoutingMode(mode) { send({ cmd: "SetRoutingMode", mode: mode }) }
-  function setGeoRegion(region) { send({ cmd: "SetGeoRegion", region: region }) }
   function setKillSwitch(enabled) { send({ cmd: "SetKillSwitch", enabled: enabled }) }
   function setAutoConnect(enabled) { send({ cmd: "SetAutoConnect", enabled: enabled }) }
 
@@ -163,12 +164,48 @@ Item {
   }
 
   property string _profilesKey: ""
+  property string _routingModesKey: ""
 
   function boundedString(value) {
     if (value === undefined || value === null) return ""
     var result = String(value)
     return result.length <= maxExternalStringLength
       ? result : result.slice(0, maxExternalStringLength)
+  }
+
+  function routingModesOf(rawModes) {
+    var modes = []
+    for (var i = 0; i < rawModes.length && modes.length < maxRoutingModes; i++) {
+      var m = rawModes[i] && typeof rawModes[i] === "object"
+        && !Array.isArray(rawModes[i]) ? rawModes[i] : {}
+      var id = boundedString(m.id)
+      if (id === "") continue
+      var name = boundedString(m.name)
+      modes.push({ id: id, name: name !== "" ? name : id })
+    }
+    return modes
+  }
+
+  // A daemon without snapshot.routing selects one of three modes per region:
+  // selected_region_modes[current_region] ?? "global".
+  function legacyRegionModes(gr) {
+    var region = boundedString(gr.current_region)
+    var modes = [{ id: "global", name: "Global" }]
+    if (region === "" || region === "global") return modes
+    var code = region.toUpperCase()
+    modes.push({ id: "bypass_" + region, name: "Bypass " + code })
+    modes.push({ id: "only_" + region, name: "Only " + code })
+    return modes
+  }
+
+  function legacyRegionMode(gr) {
+    var region = boundedString(gr.current_region)
+    var selectedModes = gr.selected_region_modes
+      && typeof gr.selected_region_modes === "object"
+      && !Array.isArray(gr.selected_region_modes) ? gr.selected_region_modes : null
+    return region !== "" && selectedModes
+      ? boundedString(selectedModes[region] || "global")
+      : "global"
   }
 
   function handleSocketData(data) {
@@ -286,14 +323,19 @@ Item {
 
     var gr = settings.geo_routing && typeof settings.geo_routing === "object"
       && !Array.isArray(settings.geo_routing) ? settings.geo_routing : {}
-    var currentRegion = boundedString(gr.current_region)
-    var selectedModes = gr.selected_region_modes
-      && typeof gr.selected_region_modes === "object"
-      && !Array.isArray(gr.selected_region_modes) ? gr.selected_region_modes : null
-    geoRegion = currentRegion
-    routingMode = currentRegion !== "" && selectedModes
-      ? boundedString(selectedModes[currentRegion] || "global")
-      : "global"
+    var routing = snap.routing && typeof snap.routing === "object"
+      && !Array.isArray(snap.routing) ? snap.routing : {}
+    var modesById = Array.isArray(routing.modes)
+    var modes = modesById ? routingModesOf(routing.modes) : legacyRegionModes(gr)
+    if (modes.length === 0) modes = [{ id: "global", name: "Global" }]
+    var modesKey = modes.map(function(m) { return m.id + "|" + m.name }).join(";")
+    if (modesKey !== _routingModesKey) {
+      _routingModesKey = modesKey
+      routingModes = modes
+    }
+    var selectedMode = modesById ? boundedString(gr.mode) : legacyRegionMode(gr)
+    routingMode = modes.some(function(m) { return m.id === selectedMode })
+      ? selectedMode : "global"
 
     killSwitch = settings.kill_switch === true
     autoConnect = settings.auto_connect === true
