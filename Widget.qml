@@ -29,6 +29,7 @@ BarWidget {
       else root.refocusPanel()
     }
     onOnboardingPendingChanged: root.refocusPanel()
+    onPluginOutdatedChanged: root.pluginUpdateNote = ""
   }
 
   // The visible panel changed under an open popup: its focus target is now
@@ -66,11 +67,13 @@ BarWidget {
   readonly property int rowHorizontalPadding: Style.space(10)
   readonly property int rowContentSpacing: Style.space(8)
 
-  // All keyboard-selectable panel rows in order: hero toggle, profiles,
-  // settings, then the footer button.
+  // All keyboard-selectable panel rows in order: the plugin update button
+  // while kvn needs a newer omakvn, hero toggle, profiles, settings, then the
+  // footer button.
   readonly property int profileCount: kvn.profiles.length
-  readonly property int rowVpnToggle: 0
-  readonly property int rowProfileStart: 1
+  readonly property int rowPluginUpdate: kvn.pluginOutdated ? 0 : -1
+  readonly property int rowVpnToggle: kvn.pluginOutdated ? 1 : 0
+  readonly property int rowProfileStart: rowVpnToggle + 1
   readonly property int rowRouting: rowProfileStart + profileCount
   readonly property int rowKillSwitch: rowRouting + 1
   readonly property int rowAutoConnect: rowKillSwitch + 1
@@ -111,6 +114,56 @@ BarWidget {
     id: daemonStarter
     command: ["systemctl", "--user", "start", "kvn-tui.service"]
     onExited: kvn.reconnectSocket()
+  }
+
+  // The panel's update button; omarchy rescans plugins after an update, which
+  // reloads this widget, so only a failure or a run that found nothing newer
+  // needs to be shown here.
+  readonly property var pluginUpdateCommand:
+    ["omarchy", "plugin", "update", "yarikov.omakvn", "--yes"]
+  property string pluginUpdateNote: ""
+  // Process.exited and the end of each output stream arrive in no fixed
+  // order; the result is read once all three have.
+  property int pluginUpdateEventsLeft: 0
+  property int pluginUpdateExitCode: 0
+
+  function updatePlugin() {
+    if (pluginUpdater.running) return
+    pluginUpdateNote = ""
+    pluginUpdateEventsLeft = 3
+    pluginUpdater.running = true
+  }
+
+  function pluginUpdateEventArrived() {
+    pluginUpdateEventsLeft -= 1
+    if (pluginUpdateEventsLeft > 0) return
+    if (pluginUpdateExitCode !== 0) {
+      var lines = String(pluginUpdateStderr.text || "").trim().split("\n")
+      var reason = lines[lines.length - 1]
+      pluginUpdateNote = "Update failed: " + (reason !== ""
+        ? reason : "omarchy plugin update exited with " + pluginUpdateExitCode)
+    } else if (String(pluginUpdateStdout.text || "").indexOf("is up to date") !== -1) {
+      pluginUpdateNote = "No newer omakvn is published yet."
+    }
+  }
+
+  Process {
+    id: pluginUpdater
+    command: root.pluginUpdateCommand
+    stdout: StdioCollector {
+      id: pluginUpdateStdout
+      waitForEnd: true
+      onStreamFinished: root.pluginUpdateEventArrived()
+    }
+    stderr: StdioCollector {
+      id: pluginUpdateStderr
+      waitForEnd: true
+      onStreamFinished: root.pluginUpdateEventArrived()
+    }
+    onExited: function(exitCode) {
+      root.pluginUpdateExitCode = exitCode
+      root.pluginUpdateEventArrived()
+    }
   }
 
   readonly property string installUrl: "https://github.com/yarikov/kvn#installation-arch-linux"
@@ -213,12 +266,13 @@ BarWidget {
       if (kvn.missing) return "kvn — not installed (click for setup)"
       if (!kvn.daemonUp) return "kvn-tui — daemon not running (click to start)"
       if (kvn.onboardingPending) return "kvn — finish onboarding (click to open)"
+      var update = kvn.pluginOutdated ? " · omakvn update required" : ""
       if (kvn.connected) {
         var p = root.activeProfile()
-        return "kvn-tui — connected to " + (p ? p.name : "profile")
+        return "kvn-tui — connected to " + (p ? p.name : "profile") + update
       }
-      if (kvn.busy) return "kvn-tui — connecting…"
-      return "kvn-tui — disconnected"
+      if (kvn.busy) return "kvn-tui — connecting…" + update
+      return "kvn-tui — disconnected" + update
     }
     foreground: root.foreground
     activeColor: root.foreground
@@ -390,6 +444,54 @@ BarWidget {
         Layout.fillHeight: true
         spacing: Style.space(12)
         visible: kvn.daemonUp && !kvn.onboardingPending
+
+        // This kvn needs a newer plugin: offer omarchy's own update.
+        ColumnLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(6)
+          visible: kvn.pluginOutdated
+
+          Text {
+            Layout.fillWidth: true
+            textFormat: Text.PlainText
+            text: kvn.requiredPluginVersion !== ""
+              ? "This kvn needs omakvn " + kvn.requiredPluginVersion + " or newer."
+              : "This kvn needs a newer omakvn."
+            color: root.dim
+            wrapMode: Text.Wrap
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.body
+          }
+
+          Button {
+            Layout.fillWidth: true
+            text: pluginUpdater.running ? "Updating…" : "Update plugin"
+            foreground: root.foreground
+            accent: Color.accent
+            fontFamily: root.fontFamily
+            fontSize: Style.font.body
+            bordered: true
+            hasCursor: root.cursorActive && root.cursorIndex === root.rowPluginUpdate
+            onHovered: function(isHovered) {
+              if (isHovered) {
+                root.cursorActive = true
+                root.cursorIndex = root.rowPluginUpdate
+              }
+            }
+            onClicked: root.updatePlugin()
+          }
+
+          Text {
+            Layout.fillWidth: true
+            visible: root.pluginUpdateNote !== ""
+            textFormat: Text.PlainText
+            text: root.pluginUpdateNote
+            color: root.foreground
+            wrapMode: Text.Wrap
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+          }
+        }
 
         // Hero: VPN icon, current/last profile and connection toggle. Mirrors
         // the Omarchy network panel's Wi-Fi header.
@@ -820,7 +922,9 @@ BarWidget {
   }
 
   function activateRow(index) {
-    if (index === rowVpnToggle) {
+    if (index === rowPluginUpdate) {
+      updatePlugin()
+    } else if (index === rowVpnToggle) {
       if (!kvn.busy && (kvn.connected || profileCount > 0)) toggleVpn()
     } else if (index >= rowProfileStart && index < rowRouting) {
       var profileIndex = index - rowProfileStart

@@ -32,6 +32,8 @@ omarchy plugin add https://github.com/yarikov/omakvn.git --enable
 omarchy plugin update yarikov.omakvn
 ```
 
+When the installed `kvn` needs a newer `omakvn`, the panel says so and offers an **Update plugin** button, the first row of the panel, which runs the same command with `--yes`: it updates without showing the diff or asking for confirmation. `kvn doctor` and the `kvn` TUI point to it as well.
+
 ## Remove
 
 ```bash

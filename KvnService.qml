@@ -38,6 +38,10 @@ Item {
   // Set only by an explicit `onboarding_complete: false`: a daemon that
   // predates the field never reports it, and must not lock the widget.
   property bool onboardingPending: false
+  // Set by `omakvn.state: "outdated"`: this kvn needs a newer plugin. A daemon
+  // that predates the field never reports it.
+  property bool pluginOutdated: false
+  property string requiredPluginVersion: ""
   property var traffic: ({ up: 0, down: 0, upTotal: 0, downTotal: 0, conns: 0 })
 
   // The bridge frames raw socket bytes before UTF-8 decoding and emits
@@ -62,6 +66,8 @@ Item {
     activeProfileId = ""
     pendingProfileId = ""
     onboardingPending = false
+    pluginOutdated = false
+    requiredPluginVersion = ""
     traffic = ({ up: 0, down: 0, upTotal: 0, downTotal: 0, conns: 0 })
     _socketBuffer = ""
     _discardingOversizeLine = false
@@ -252,6 +258,10 @@ Item {
 
     // Before daemonUp, so the panel it reveals is already the right one.
     onboardingPending = snap.onboarding_complete === false
+    var plugin = snap.omakvn && typeof snap.omakvn === "object"
+      && !Array.isArray(snap.omakvn) ? snap.omakvn : {}
+    pluginOutdated = plugin.state === "outdated"
+    requiredPluginVersion = pluginOutdated ? boundedString(plugin.required_version) : ""
     // A valid snapshot is definitive proof that the daemon is reachable.
     // The socket can connect during component construction, before QML sees
     // connectionStateChanged, so do not rely on that signal alone.
