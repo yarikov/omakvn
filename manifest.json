@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "yarikov.omakvn",
   "name": "kvn TUI VPN",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "author": "Dmitry Yarikov",
   "license": "MIT",
   "description": "Native Omarchy bar integration for kvn, a terminal VPN client for Arch Linux.",
