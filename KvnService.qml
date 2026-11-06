@@ -28,8 +28,7 @@ Item {
   property string lastProfileId: ""
   // [{ id, name, protocol, latencyMs (number|null), testing }]
   property var profiles: []
-  // Routing modes of routing.json, in file order: [{ id, name }]. A daemon
-  // that predates snapshot.routing gets the modes of its current region.
+  // Routing modes of routing.json, in file order: [{ id, name }].
   property var routingModes: [{ id: "global", name: "Global" }]
   // Id of the selected mode; one missing from routingModes runs as global.
   property string routingMode: "global"
@@ -192,28 +191,6 @@ Item {
     return modes
   }
 
-  // A daemon without snapshot.routing selects one of three modes per region:
-  // selected_region_modes[current_region] ?? "global".
-  function legacyRegionModes(gr) {
-    var region = boundedString(gr.current_region)
-    var modes = [{ id: "global", name: "Global" }]
-    if (region === "" || region === "global") return modes
-    var code = region.toUpperCase()
-    modes.push({ id: "bypass_" + region, name: "Bypass " + code })
-    modes.push({ id: "only_" + region, name: "Only " + code })
-    return modes
-  }
-
-  function legacyRegionMode(gr) {
-    var region = boundedString(gr.current_region)
-    var selectedModes = gr.selected_region_modes
-      && typeof gr.selected_region_modes === "object"
-      && !Array.isArray(gr.selected_region_modes) ? gr.selected_region_modes : null
-    return region !== "" && selectedModes
-      ? boundedString(selectedModes[region] || "global")
-      : "global"
-  }
-
   function handleSocketData(data) {
     var chunk = String(data)
     var offset = 0
@@ -335,15 +312,14 @@ Item {
       && !Array.isArray(settings.geo_routing) ? settings.geo_routing : {}
     var routing = snap.routing && typeof snap.routing === "object"
       && !Array.isArray(snap.routing) ? snap.routing : {}
-    var modesById = Array.isArray(routing.modes)
-    var modes = modesById ? routingModesOf(routing.modes) : legacyRegionModes(gr)
+    var modes = Array.isArray(routing.modes) ? routingModesOf(routing.modes) : []
     if (modes.length === 0) modes = [{ id: "global", name: "Global" }]
     var modesKey = modes.map(function(m) { return m.id + "|" + m.name }).join(";")
     if (modesKey !== _routingModesKey) {
       _routingModesKey = modesKey
       routingModes = modes
     }
-    var selectedMode = modesById ? boundedString(gr.mode) : legacyRegionMode(gr)
+    var selectedMode = boundedString(gr.mode)
     routingMode = modes.some(function(m) { return m.id === selectedMode })
       ? selectedMode : "global"
 
