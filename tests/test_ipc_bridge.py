@@ -1,6 +1,8 @@
 import importlib.util
 import json
 from pathlib import Path
+import socket
+import tempfile
 import unittest
 
 
@@ -46,6 +48,27 @@ class NormalizationTests(unittest.TestCase):
         value = "я" * (ipc_bridge.MAX_LINE_BYTES // 6 + 1)
 
         self.assertIsNone(ipc_bridge.normalize_line(json.dumps(value, ensure_ascii=False).encode()))
+
+
+class ConnectFirstTests(unittest.TestCase):
+    def test_falls_back_to_the_next_socket_path(self):
+        with tempfile.TemporaryDirectory() as runtime_dir:
+            legacy_path = str(Path(runtime_dir) / "kvn-tui.sock")
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
+                server.bind(legacy_path)
+                server.listen(1)
+
+                daemon = ipc_bridge.connect_first(
+                    [str(Path(runtime_dir) / "kvn" / "daemon.sock"), legacy_path]
+                )
+
+                with daemon:
+                    self.assertEqual(daemon.getpeername(), legacy_path)
+
+    def test_raises_when_no_socket_path_answers(self):
+        with tempfile.TemporaryDirectory() as runtime_dir:
+            with self.assertRaises(FileNotFoundError):
+                ipc_bridge.connect_first([str(Path(runtime_dir) / "kvn" / "daemon.sock")])
 
 
 if __name__ == "__main__":

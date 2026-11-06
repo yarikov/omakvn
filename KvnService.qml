@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Single connection to the kvn-tui daemon: NDJSON over a Unix socket.
+// Single connection to the kvn daemon: NDJSON over a Unix socket.
 //
 // The daemon pushes a full StateSnapshot after every state change (and about
 // once per second with live traffic while connected), so the widget never
@@ -13,10 +13,10 @@ Item {
 
   // --- state mirrored from the latest snapshot -----------------------------
   property bool daemonUp: false
-  // Whether `kvn-tui` is on PATH. Optimistic until the first check finishes so
+  // Whether `kvn` is on PATH. Optimistic until the first check finishes so
   // the "not installed" state never flashes when kvn is present.
   property bool installed: true
-  // A responding daemon proves kvn is present even when `kvn-tui` is not on
+  // A responding daemon proves kvn is present even when `kvn` is not on
   // this shell's PATH, so only report it missing while the daemon is down.
   readonly property bool missing: !installed && !daemonUp
   // Idle | Connecting | ConnectPending | Connected
@@ -76,11 +76,13 @@ Item {
   property string uid: ""
   readonly property var bridge: bridgeLoader.item
 
-  readonly property string socketPath: {
+  readonly property string runtimeDir: {
     var xdg = Quickshell.env("XDG_RUNTIME_DIR") || ""
-    if (xdg !== "") return xdg + "/kvn-tui.sock"
-    return uid !== "" ? "/tmp/kvn-tui-" + uid + ".sock" : ""
+    if (xdg !== "") return xdg
+    return uid !== "" ? "/run/user/" + uid : ""
   }
+  readonly property var socketPaths: runtimeDir !== ""
+    ? [runtimeDir + "/kvn/daemon.sock", runtimeDir + "/kvn-tui.sock"] : []
 
   function send(cmd) {
     if (!bridge || !bridge.running) return false
@@ -116,7 +118,7 @@ Item {
 
   Process {
     id: installCheck
-    command: ["sh", "-c", "command -v kvn-tui"]
+    command: ["sh", "-c", "command -v kvn"]
     running: true
     onExited: function(exitCode) { root.installed = exitCode === 0 }
   }
@@ -142,9 +144,9 @@ Item {
 
   Loader {
     id: bridgeLoader
-    active: root.socketPath !== ""
+    active: root.socketPaths.length > 0
     sourceComponent: Process {
-      command: ["python3", root.bridgePath, root.socketPath]
+      command: ["python3", root.bridgePath].concat(root.socketPaths)
       running: true
       stdinEnabled: true
       stdout: SplitParser {
@@ -160,11 +162,11 @@ Item {
 
   // Flip the link off and on until the daemon answers. A failed connect
   // leaves the Socket dead — it does not retry on its own. Back off while
-  // `kvn-tui` is not found, but keep trying in case the daemon runs anyway.
+  // `kvn` is not found, but keep trying in case the daemon runs anyway.
   Timer {
     interval: root.installed ? 1000 : 10000
     repeat: true
-    running: !root.daemonUp && root.socketPath !== ""
+    running: !root.daemonUp && root.socketPaths.length > 0
     onTriggered: root.reconnectSocket()
   }
 
