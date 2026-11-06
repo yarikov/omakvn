@@ -85,9 +85,21 @@ def normalize_line(line: bytes) -> bytes | None:
     return encoded if len(encoded) <= MAX_LINE_BYTES else None
 
 
-def run(socket_path: str) -> int:
-    daemon = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    daemon.connect(socket_path)
+def connect_first(socket_paths: list[str]) -> socket.socket:
+    failure: OSError = FileNotFoundError("no daemon socket path")
+    for socket_path in socket_paths:
+        daemon = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            daemon.connect(socket_path)
+            return daemon
+        except OSError as error:
+            daemon.close()
+            failure = error
+    raise failure
+
+
+def run(socket_paths: list[str]) -> int:
+    daemon = connect_first(socket_paths)
     daemon.sendall(b'{"cmd":"Attach"}\n')
 
     selector = selectors.DefaultSelector()
@@ -114,10 +126,10 @@ def run(socket_path: str) -> int:
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         return 2
     try:
-        return run(sys.argv[1])
+        return run(sys.argv[1:])
     except (BrokenPipeError, ConnectionError, OSError):
         return 1
 
