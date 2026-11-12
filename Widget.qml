@@ -8,7 +8,7 @@ import qs.Ui
 
 pragma ComponentBehavior: Bound
 
-// kvn-tui bar widget.
+// kvn bar widget.
 //
 // Icon states: dim shield = disconnected, full-color shield = connected,
 // pulsing = connecting.
@@ -112,7 +112,8 @@ BarWidget {
 
   Process {
     id: daemonStarter
-    command: ["systemctl", "--user", "start", "kvn-tui.service"]
+    command: ["sh", "-c",
+      "systemctl --user start kvn.service || systemctl --user start kvn-tui.service"]
     onExited: kvn.reconnectSocket()
   }
 
@@ -168,7 +169,7 @@ BarWidget {
 
   readonly property string installUrl: "https://github.com/yarikov/kvn#installation-arch-linux"
   readonly property string installCommand:
-    "yay -S kvn-tui-bin && systemctl --user enable --now kvn-tui.service"
+    "yay -S kvn-bin && systemctl --user enable --now kvn-tui.service"
 
   function openInstallPage() {
     Quickshell.execDetached(["xdg-open", root.installUrl])
@@ -182,12 +183,12 @@ BarWidget {
   }
 
   function openTui() {
-    var command = "omarchy-launch-or-focus-tui --app-id=org.omarchy.kvn-tui kvn-tui"
+    var command = "omarchy-launch-or-focus-tui --app-id=org.omarchy.kvn-tui kvn"
     if (root.bar) root.bar.run(command)
     else Quickshell.execDetached([
       "omarchy-launch-or-focus-tui",
       "--app-id=org.omarchy.kvn-tui",
-      "kvn-tui"
+      "kvn"
     ])
     root.close()
   }
@@ -264,15 +265,15 @@ BarWidget {
     fontFamily: root.fontFamily
     tooltipText: {
       if (kvn.missing) return "kvn — not installed (click for setup)"
-      if (!kvn.daemonUp) return "kvn-tui — daemon not running (click to start)"
+      if (!kvn.daemonUp) return "kvn — daemon not running (click to start)"
       if (kvn.onboardingPending) return "kvn — finish onboarding (click to open)"
       var update = kvn.pluginOutdated ? " · omakvn update required" : ""
       if (kvn.connected) {
         var p = root.activeProfile()
-        return "kvn-tui — connected to " + (p ? p.name : "profile") + update
+        return "kvn — connected to " + (p ? p.name : "profile") + update
       }
-      if (kvn.busy) return "kvn-tui — connecting…" + update
-      return "kvn-tui — disconnected" + update
+      if (kvn.busy) return "kvn — connecting…" + update
+      return "kvn — disconnected" + update
     }
     foreground: root.foreground
     activeColor: root.foreground
@@ -328,7 +329,7 @@ BarWidget {
           textFormat: Text.PlainText
           text: kvn.missing
             ? "kvn is not installed. Install it to control the VPN from the bar:"
-            : "The kvn-tui daemon is not running. Start it to control the VPN from the bar."
+            : "The kvn daemon is not running. Start it to control the VPN from the bar."
           color: root.dim
           wrapMode: Text.Wrap
           font.family: root.fontFamily
@@ -726,7 +727,7 @@ BarWidget {
             textFormat: Text.PlainText
             width: parent.width - Style.space(16)
             visible: root.profileCount === 0
-            text: "No profiles. Add them with `kvn-tui` (p to paste a link)."
+            text: "No profiles. Add them with `kvn` (p to paste a link)."
             color: root.dim
             wrapMode: Text.Wrap
             horizontalAlignment: Text.AlignHCenter
